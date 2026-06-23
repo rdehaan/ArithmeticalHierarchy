@@ -37,7 +37,7 @@ open Nat.Partrec.Code (eval evaln evaln_complete evaln_sound ofNatCode)
 
 namespace Computability
 
-variable {n : ℕ} {p : ℕ → Prop}
+variable {n m : ℕ} {p : ℕ → Prop}
 
 mutual
 
@@ -96,9 +96,8 @@ theorem delta0.zero_iff : delta0 0 p ↔ PrimrecPred p := by
   simp [delta0]
 
 
-/-! ### Monotonicity -/
+/-! ### Basic properties -/
 
-/-- Simultaneous monotonicity statement. -/
 private theorem mono_aux :
     (∀ p : ℕ → Prop, sigma0 n p → sigma0 (n + 1) p) ∧
     (∀ p : ℕ → Prop, pi0 n p → pi0 (n + 1) p) := by
@@ -119,12 +118,65 @@ private theorem mono_aux :
     · obtain ⟨q, hq, rfl⟩ := hp
       exact ⟨q, ih.1 q hq, rfl⟩
 
-/-- A Σ⁰ₙ predicate is also Σ⁰ₙ₊₁. -/
 theorem sigma0.mono (h : sigma0 n p) : sigma0 (n + 1) p :=
   mono_aux.1 p h
 
-/-- A Π⁰ₙ predicate is also Π⁰ₙ₊₁. -/
 theorem pi0.mono (h : pi0 n p) : pi0 (n + 1) p :=
   mono_aux.2 p h
+
+theorem sigma0.mono_le (hnm : n ≤ m) (h : sigma0 n p) :
+    sigma0 m p := by
+  induction hnm with
+  | refl => exact h
+  | step _ ih => exact ih.mono
+
+theorem pi0.mono_le (hnm : n ≤ m) (h : pi0 n p) :
+    pi0 m p := by
+  induction hnm with
+  | refl => exact h
+  | step _ ih => exact ih.mono
+
+theorem sigma0.of_primrec (h : PrimrecPred p) : sigma0 n p := by
+  induction n with
+  | zero => exact h
+  | succ n ih => exact ih.mono
+
+theorem pi0.of_primrec (h : PrimrecPred p) : pi0 n p := by
+  induction n with
+  | zero => exact h
+  | succ n ih => exact ih.mono
+
+private theorem neg_aux :
+    (∀ p : ℕ → Prop, sigma0 n p → pi0 n (fun x => ¬ p x)) ∧
+    (∀ p : ℕ → Prop, pi0 n p → sigma0 n (fun x => ¬ p x)) := by
+  induction n with
+  | zero =>
+    exact ⟨fun p hp => PrimrecPred.not hp, fun p hp => PrimrecPred.not hp⟩
+  | succ n ih =>
+    refine ⟨fun p hp => ?_, fun p hp => ?_⟩
+    · obtain ⟨q, hq, rfl⟩ := hp
+      refine ⟨fun z => ¬ q z, ih.2 q hq, ?_⟩
+      funext x
+      simp
+    · obtain ⟨q, hq, rfl⟩ := hp
+      refine ⟨fun z => ¬ q z, ih.1 q hq, ?_⟩
+      funext x
+      simp
+
+theorem pi0.iff_not_sigma0 : pi0 n p ↔ sigma0 n (fun x => ¬ p x) := by
+  constructor
+  · intro h
+    exact neg_aux.2 p h
+  · intro h
+    have := neg_aux.1 _ h
+    simp_all
+
+theorem sigma0.iff_not_pi0 : sigma0 n p ↔ pi0 n (fun x => ¬ p x) := by
+  constructor
+  · intro h
+    exact neg_aux.1 p h
+  · intro h
+    have := neg_aux.2 _ h
+    simp_all
 
 end Computability
