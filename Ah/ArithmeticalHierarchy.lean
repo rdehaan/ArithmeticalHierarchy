@@ -556,14 +556,36 @@ theorem delta0.forall_lt_primrec : delta0 n (fun m => s m.unpair.1 m.unpair.2) �
 /-! sigma0 is closed under unbounded existential quantification -/
 
 theorem sigma0.exists_succ (h : sigma0 (n + 1) q) :
-    sigma0 (n + 1) (fun x => ∃ y, q (pair x y)) := by
-  sorry
+    sigma0 (n + 1) (fun m => ∃ k, q (pair m k)) := by
+  obtain ⟨q, hq, rfl⟩ := h
+  refine ⟨fun m => q (pair (pair m.unpair.1 m.unpair.2.unpair.1) m.unpair.2.unpair.2),
+    pi0.comp_primrec hq Primrec.pair_assoc_left, ?_⟩
+  funext m
+  apply propext
+  constructor
+  · rintro ⟨k, k', hk'⟩
+    refine ⟨pair k k', ?_⟩
+    simp_all
+  · rintro ⟨k, hk⟩
+    simp_all only [Nat.unpair_pair]
+    exact ⟨k.unpair.1, k.unpair.2, hk⟩
 
 /-! pi0 is closed under unbounded universal quantification -/
 
 theorem pi0.forall_succ (h : pi0 (n + 1) q) :
-    pi0 (n + 1) (fun x => ∀ y, q (pair x y)) := by
-  sorry
+    pi0 (n + 1) (fun m => ∀ k, q (pair m k)) := by
+  obtain ⟨q, hq, rfl⟩ := h
+  refine ⟨fun m => q (pair (pair m.unpair.1 m.unpair.2.unpair.1) m.unpair.2.unpair.2),
+    sigma0.comp_primrec hq Primrec.pair_assoc_left, ?_⟩
+  funext m
+  apply propext
+  constructor
+  · intro hall k
+    have := hall k.unpair.1 k.unpair.2
+    simp_all
+  · intro hall k k'
+    have := hall (pair k k')
+    simp_all
 
 
 /-! ## Closure under computable substitution and many-one reducibility -/
@@ -585,10 +607,22 @@ theorem delta0.comp_computable (hp : delta0 (n + 1) p) (hf : Computable f) :
 /-! Downward closure under many-one reducibility -/
 
 theorem sigma0.of_manyOneReducible (hred : p ≤₀ q) (hq : sigma0 (n + 1) q) : sigma0 (n + 1) p := by
-  sorry
+  obtain ⟨f, hf, hpq⟩ := hred
+  have heq : p = fun m => q (f m) := by
+    funext m
+    apply propext
+    simp_all
+  rw [heq]
+  exact sigma0.comp_computable hq hf
 
 theorem pi0.of_manyOneReducible (hred : p ≤₀ q) (hq : pi0 (n + 1) q) : pi0 (n + 1) p := by
-  sorry
+  obtain ⟨f, hf, hpq⟩ := hred
+  have heq : p = fun m => q (f m) := by
+    funext m
+    apply propext
+    simp_all
+  rw [heq]
+  exact pi0.comp_computable hq hf
 
 theorem delta0.of_manyOneReducible (hred : p ≤₀ q) (hq : delta0 (n + 1) q) : delta0 (n + 1) p :=
   ⟨sigma0.of_manyOneReducible hred hq.1, pi0.of_manyOneReducible hred hq.2⟩
@@ -749,19 +783,32 @@ theorem haltingSet_one_not_computable : ¬(ComputablePred (haltingSet 1)) := by
   sorry
 
 theorem haltingSet_one_not_pi0_one : ¬(pi0 1 (haltingSet 1)) := by
-  sorry
+  intro h
+  apply haltingSet_one_not_computable
+  rw [← delta0.one_iff_computable]
+  exact ⟨haltingSet_mem_sigma0 1, h⟩
 
 theorem ManyOneReducible.compl (h : p ≤₀ q) : (fun x => ¬ p x) ≤₀ (fun x => ¬ q x) := by
-  sorry
+  obtain ⟨f, hf, hpq⟩ := h
+  refine ⟨f, hf, ?_⟩
+  simp_all
 
-theorem haltingSetCompl_one_pi0_complete : pi0Complete 1 (haltingSetCompl 1) := by
-  sorry
+theorem haltingSetCompl_one_pi0_complete : pi0Complete 1 (haltingSetCompl 1) :=
+  pi0Complete.mk (haltingSetCompl_mem_pi0 1) (fun q hq => by
+    simp_all only [pi0.iff_not_sigma0]
+    obtain ⟨f, hf, hfr⟩ := haltingSet_one_sigma0_complete.2 (fun x => ¬(q x)) hq
+    refine ⟨f, hf, fun x => ?_⟩
+    rw [haltingSet_compl]
+    sorry)
 
 theorem haltingSetCompl_one_not_computable : ¬(ComputablePred (haltingSetCompl 1)) := by
   sorry
 
 theorem haltingSetCompl_one_not_sigma0_one : ¬(sigma0 1 (haltingSetCompl 1)) := by
-  sorry
+  intro h
+  apply haltingSetCompl_one_not_computable
+  rw [← delta0.one_iff_computable]
+  exact ⟨h, haltingSetCompl_mem_pi0 1⟩
 
 
 /-! ## Higher-level completeness -/
