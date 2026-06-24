@@ -65,7 +65,6 @@ end
 i.e., both Σ⁰ₙ and Π⁰ₙ. -/
 def delta0 (n : ℕ) (p : ℕ → Prop) : Prop := sigma0 n p ∧ pi0 n p
 
-
 /-! Unfolding lemmas -/
 
 @[simp]
@@ -143,7 +142,6 @@ theorem pi0.of_primrec (h : PrimrecPred p) : pi0 n p := by
   | zero => exact h
   | succ n ih => exact ih.mono
 
-
 /-! Closure under primitive recursion -/
 
 private theorem comp_aux :
@@ -176,7 +174,6 @@ theorem sigma0.comp_primrec (hp : sigma0 n p) (hf : Primrec f) : sigma0 n (fun x
 theorem pi0.comp_primrec (hp : pi0 n p) (hf : Primrec f) : pi0 n (fun x => p (f x)) :=
   comp_aux.2 p f hp hf
 
-
 /-! Trivial (crossing) inclusions -/
 
 theorem sigma0.of_pi0_succ (h : pi0 n p) : sigma0 (n + 1) p := by
@@ -187,6 +184,18 @@ theorem sigma0.of_pi0_succ (h : pi0 n p) : sigma0 (n + 1) p := by
 theorem pi0.of_sigma0_succ (h : sigma0 n p) : pi0 (n + 1) p := by
   refine ⟨fun z => p z.unpair.1, sigma0.comp_primrec h (Primrec.fst.comp Primrec.unpair), ?_⟩
   funext x
+  simp
+
+/-! Quantifier shifting -/
+
+theorem pi0.of_forall_sigma01 (hp : sigma0 1 (fun z => r z.unpair.1 z.unpair.2)) :
+    pi0 2 (fun x => ∀ y, r x y) := by
+  refine ⟨fun z => r z.unpair.1 z.unpair.2, hp, ?_⟩
+  simp
+
+theorem sigma0.of_exists_pi01 (hp : pi0 1 (fun z => r z.unpair.1 z.unpair.2)) :
+    sigma0 2 (fun x => ∃ y, r x y) := by
+  refine ⟨_, hp, ?_⟩
   simp
 
 
@@ -242,7 +251,6 @@ private theorem PrimrecPred.forall_lt_pair (hs : PrimrecPred (fun z : ℕ => s z
 
 /-! Finite-sequence coding (needed for sigma0.forall_lt_primrec) -/
 
-/-- Primitive-recursive finite-sequence decoder. -/
 private def seqDecode (s y : ℕ) : ℕ :=
   ((Encodable.decode (α := List ℕ) s).getD []).getD y 0
 
@@ -502,7 +510,6 @@ theorem sigma0.forall_lt_primrec : sigma0 n (fun z => s z.unpair.1 z.unpair.2) �
 theorem sigma0.forall_lt (hr : sigma0 n (fun z => r z.unpair.1 z.unpair.2)) :
     sigma0 n (fun x => ∀ y < x, r x y) :=
   sigma0.forall_lt_primrec hr Primrec.id
-
 
 /-! pi0 closed under bounded existential quantification -/
 
