@@ -101,10 +101,10 @@ private theorem mono_aux :
   | zero =>
     simp only [sigma0.zero_eq, zero_add, sigma0.succ_eq, pi0.zero_eq, pi0.succ_eq]
     refine ⟨fun p hp => ?_, fun p hp => ?_⟩
-    · refine ⟨fun z => p z.unpair.1, ?_⟩
+    · refine ⟨fun m => p m.unpair.1, ?_⟩
       simp only [Nat.unpair_pair, exists_const, and_true]
       exact PrimrecPred.comp hp (Primrec.fst.comp Primrec.unpair)
-    · refine ⟨fun z => p z.unpair.1, ?_⟩
+    · refine ⟨fun m => p m.unpair.1, ?_⟩
       simp only [Nat.unpair_pair, forall_const, and_true]
       exact PrimrecPred.comp hp (Primrec.fst.comp Primrec.unpair)
   | succ n ih =>
@@ -153,17 +153,17 @@ private theorem comp_aux :
            fun p f hp hf => PrimrecPred.comp hp hf⟩
   | succ n ih =>
     have h_unpack : ∀ f : ℕ → ℕ, Primrec f →
-        Primrec (fun z : ℕ => pair (f z.unpair.1) z.unpair.2) := fun f hf =>
+        Primrec (fun m : ℕ => pair (f m.unpair.1) m.unpair.2) := fun f hf =>
       Primrec₂.natPair.comp (hf.comp (Primrec.fst.comp Primrec.unpair))
         (Primrec.snd.comp Primrec.unpair)
     refine ⟨fun p f hp hf => ?_, fun p f hp hf => ?_⟩
     · obtain ⟨q, hq, rfl⟩ := hp
-      refine ⟨fun z => q (pair (f z.unpair.1) z.unpair.2), ?_, ?_⟩
+      refine ⟨fun m => q (pair (f m.unpair.1) m.unpair.2), ?_, ?_⟩
       · exact ih.2 q _ hq (h_unpack f hf)
       · funext x
         simp
     · obtain ⟨q, hq, rfl⟩ := hp
-      refine ⟨fun z => q (pair (f z.unpair.1) z.unpair.2), ?_, ?_⟩
+      refine ⟨fun m => q (pair (f m.unpair.1) m.unpair.2), ?_, ?_⟩
       · exact ih.1 q _ hq (h_unpack f hf)
       · funext x
         simp
@@ -177,23 +177,23 @@ theorem pi0.comp_primrec (hp : pi0 n p) (hf : Primrec f) : pi0 n (fun x => p (f 
 /-! Trivial (crossing) inclusions -/
 
 theorem sigma0.of_pi0_succ (h : pi0 n p) : sigma0 (n + 1) p := by
-  refine ⟨fun z => p z.unpair.1, pi0.comp_primrec h (Primrec.fst.comp Primrec.unpair), ?_⟩
+  refine ⟨fun m => p m.unpair.1, pi0.comp_primrec h (Primrec.fst.comp Primrec.unpair), ?_⟩
   funext x
   simp
 
 theorem pi0.of_sigma0_succ (h : sigma0 n p) : pi0 (n + 1) p := by
-  refine ⟨fun z => p z.unpair.1, sigma0.comp_primrec h (Primrec.fst.comp Primrec.unpair), ?_⟩
+  refine ⟨fun m => p m.unpair.1, sigma0.comp_primrec h (Primrec.fst.comp Primrec.unpair), ?_⟩
   funext x
   simp
 
 /-! Quantifier shifting -/
 
-theorem pi0.of_forall_sigma01 (hp : sigma0 1 (fun z => r z.unpair.1 z.unpair.2)) :
+theorem pi0.of_forall_sigma01 (hp : sigma0 1 (fun m => r m.unpair.1 m.unpair.2)) :
     pi0 2 (fun x => ∀ y, r x y) := by
-  refine ⟨fun z => r z.unpair.1 z.unpair.2, hp, ?_⟩
+  refine ⟨fun m => r m.unpair.1 m.unpair.2, hp, ?_⟩
   simp
 
-theorem sigma0.of_exists_pi01 (hp : pi0 1 (fun z => r z.unpair.1 z.unpair.2)) :
+theorem sigma0.of_exists_pi01 (hp : pi0 1 (fun m => r m.unpair.1 m.unpair.2)) :
     sigma0 2 (fun x => ∃ y, r x y) := by
   refine ⟨_, hp, ?_⟩
   simp
@@ -203,7 +203,7 @@ theorem sigma0.of_exists_pi01 (hp : pi0 1 (fun z => r z.unpair.1 z.unpair.2)) :
 
 /-! Primitive recursive helpers -/
 
-theorem PrimrecPred.lt_pair : PrimrecPred (fun z : ℕ => z.unpair.2 < z.unpair.1) := by
+theorem PrimrecPred.lt_pair : PrimrecPred (fun m : ℕ => m.unpair.2 < m.unpair.1) := by
   have h_le : PrimrecRel (fun x y : ℕ => y < x) :=
     Primrec.nat_lt.comp (Primrec.snd) (Primrec.fst)
   exact h_le.comp (Primrec.fst.comp Primrec.unpair) (Primrec.snd.comp Primrec.unpair)
@@ -214,16 +214,16 @@ theorem PrimrecPred.eq_const (k : ℕ) : PrimrecPred (fun n : ℕ => n = k) :=
 theorem Primrec.pair_zero : Primrec (fun x : ℕ => Nat.pair x 0) :=
   Primrec₂.natPair.comp Primrec.id (Primrec.const 0)
 
-theorem Primrec.pair_swap : Primrec (fun z : ℕ => pair z.unpair.2 z.unpair.1) :=
+theorem Primrec.pair_swap : Primrec (fun m : ℕ => pair m.unpair.2 m.unpair.1) :=
   Primrec.pair (Primrec.snd.comp Primrec.unpair) (Primrec.fst.comp Primrec.unpair)
 
 theorem Primrec.pair_unpair_repack :
-    Primrec (fun z : ℕ => pair z.unpair.1 (pair z.unpair.2 0)) :=
+    Primrec (fun m : ℕ => pair m.unpair.1 (pair m.unpair.2 0)) :=
   Primrec₂.natPair.comp (Primrec.fst.comp Primrec.unpair)
     (Primrec₂.natPair.comp (Primrec.snd.comp Primrec.unpair) (Primrec.const 0))
 
 theorem Primrec.pair_assoc_left :
-    Primrec (fun z : ℕ => pair (pair z.unpair.1 z.unpair.2.unpair.1) z.unpair.2.unpair.2) :=
+    Primrec (fun m : ℕ => pair (pair m.unpair.1 m.unpair.2.unpair.1) m.unpair.2.unpair.2) :=
   Primrec₂.natPair.comp
     (Primrec₂.natPair.comp
       (Primrec.fst.comp Primrec.unpair)
@@ -231,14 +231,14 @@ theorem Primrec.pair_assoc_left :
     (Primrec.comp (Primrec.snd) (Primrec.unpair.comp (Primrec.snd.comp Primrec.unpair)))
 
 theorem Primrec.pair_assoc_right :
-    Primrec (fun z : ℕ => pair z.unpair.1.unpair.1 (pair z.unpair.1.unpair.2 z.unpair.2)) :=
+    Primrec (fun m : ℕ => pair m.unpair.1.unpair.1 (pair m.unpair.1.unpair.2 m.unpair.2)) :=
   Primrec₂.natPair.comp
     (Primrec.fst.comp (Primrec.unpair.comp (Primrec.fst.comp Primrec.unpair)))
     (Primrec₂.natPair.comp
       (Primrec.snd.comp (Primrec.unpair.comp (Primrec.fst.comp Primrec.unpair)))
       (Primrec.snd.comp Primrec.unpair))
 
-private theorem PrimrecPred.forall_lt_pair (hs : PrimrecPred (fun z : ℕ => s z.unpair.1 z.unpair.2))
+private theorem PrimrecPred.forall_lt_pair (hs : PrimrecPred (fun m : ℕ => s m.unpair.1 m.unpair.2))
     (hb : Primrec b) : PrimrecPred (fun w : ℕ => ∀ y < b w, s w y) := by
   have hT : PrimrecRel (fun a b' : ℕ => s b' a) := by
     have h := PrimrecPred.comp hs (Primrec₂.natPair.comp Primrec.snd Primrec.fst)
@@ -288,11 +288,11 @@ private theorem neg_aux :
   | succ n ih =>
     refine ⟨fun p hp => ?_, fun p hp => ?_⟩
     · obtain ⟨q, hq, rfl⟩ := hp
-      refine ⟨fun z => ¬(q z), ih.2 q hq, ?_⟩
+      refine ⟨fun m => ¬(q m), ih.2 q hq, ?_⟩
       funext x
       simp
     · obtain ⟨q, hq, rfl⟩ := hp
-      refine ⟨fun z => ¬(q z), ih.1 q hq, ?_⟩
+      refine ⟨fun m => ¬(q m), ih.1 q hq, ?_⟩
       funext x
       simp
 
@@ -332,18 +332,18 @@ private theorem bool_aux :
   | succ n ih =>
     obtain ⟨ihSigmaAnd, ihSigmaOr, ihPiAnd, ihPiOr⟩ := ih
     -- g₁ ⟨x,⟨y₁,y₂⟩⟩ = ⟨x,y₁⟩
-    have g₁ : Primrec (fun z : ℕ => pair z.unpair.1 z.unpair.2.unpair.1) :=
+    have g₁ : Primrec (fun m : ℕ => pair m.unpair.1 m.unpair.2.unpair.1) :=
       Primrec₂.natPair.comp (Primrec.fst.comp Primrec.unpair)
         (Primrec.fst.comp (Primrec.unpair.comp (Primrec.snd.comp Primrec.unpair)))
     -- g₁ ⟨x,⟨y₁,y₂⟩⟩ = ⟨x,y₂⟩
-    have g₂ : Primrec (fun z : ℕ => pair z.unpair.1 z.unpair.2.unpair.2) :=
+    have g₂ : Primrec (fun m : ℕ => pair m.unpair.1 m.unpair.2.unpair.2) :=
       Primrec₂.natPair.comp (Primrec.fst.comp Primrec.unpair)
         (Primrec.snd.comp (Primrec.unpair.comp (Primrec.snd.comp Primrec.unpair)))
     refine ⟨?_, ?_, ?_, ?_⟩
     · -- sigma0 n conjunction
       rintro p q ⟨q₁, hq₁, rfl⟩ ⟨q₂, hq₂, rfl⟩
-      refine ⟨fun z => q₁ (pair z.unpair.1 z.unpair.2.unpair.1) ∧
-        q₂ (pair z.unpair.1 z.unpair.2.unpair.2), ?_, ?_⟩
+      refine ⟨fun m => q₁ (pair m.unpair.1 m.unpair.2.unpair.1) ∧
+        q₂ (pair m.unpair.1 m.unpair.2.unpair.2), ?_, ?_⟩
       · exact ihPiAnd _ _ (pi0.comp_primrec hq₁ g₁) (pi0.comp_primrec hq₂ g₂)
       · funext x
         apply propext
@@ -356,18 +356,18 @@ private theorem bool_aux :
           exact ⟨⟨y.unpair.1, hy.1⟩, ⟨y.unpair.2, hy.2⟩⟩
     · -- sigma0 n disjunction
       rintro p q ⟨q₁, hq₁, rfl⟩ ⟨q₂, hq₂, rfl⟩
-      refine ⟨fun z => q₁ z ∨ q₂ z, ihPiOr _ _ hq₁ hq₂, ?_⟩
+      refine ⟨fun m => q₁ m ∨ q₂ m, ihPiOr _ _ hq₁ hq₂, ?_⟩
       funext x
       simp [exists_or]
     · -- pi0 n conjunction
       rintro p q ⟨q₁, hq₁, rfl⟩ ⟨q₂, hq₂, rfl⟩
-      refine ⟨fun z => q₁ z ∧ q₂ z, ihSigmaAnd _ _ hq₁ hq₂, ?_⟩
+      refine ⟨fun m => q₁ m ∧ q₂ m, ihSigmaAnd _ _ hq₁ hq₂, ?_⟩
       funext x
       simp [forall_and]
     · -- pi0 n disjunction
       rintro p q ⟨q₁, hq₁, rfl⟩ ⟨q₂, hq₂, rfl⟩
-      refine ⟨fun z => q₁ (pair z.unpair.1 z.unpair.2.unpair.1) ∨
-          q₂ (pair z.unpair.1 z.unpair.2.unpair.2), ?_, ?_⟩
+      refine ⟨fun m => q₁ (pair m.unpair.1 m.unpair.2.unpair.1) ∨
+          q₂ (pair m.unpair.1 m.unpair.2.unpair.2), ?_, ?_⟩
       · exact ihSigmaOr _ _ (sigma0.comp_primrec hq₁ g₁) (sigma0.comp_primrec hq₂ g₂)
       · funext x
         apply propext
@@ -397,7 +397,7 @@ theorem pi0.or (hp : pi0 n p) (hq : pi0 n q) : pi0 n (fun x => p x ∨ q x) :=
 
 /-! pi0 is closed under bounded universal quantification -/
 
-theorem pi0.forall_lt_primrec : pi0 n (fun z => s z.unpair.1 z.unpair.2) → Primrec g →
+theorem pi0.forall_lt_primrec : pi0 n (fun m => s m.unpair.1 m.unpair.2) → Primrec g →
     pi0 n (fun w => ∀ y < g w, s w y) := by
   induction n with
   | zero =>
@@ -437,17 +437,17 @@ theorem pi0.forall_lt_primrec : pi0 n (fun z => s z.unpair.1 z.unpair.2) → Pri
         have hv := h (pair y t)
         simp_all
 
-theorem pi0.forall_lt (hr : pi0 n (fun z => r z.unpair.1 z.unpair.2)) :
+theorem pi0.forall_lt (hr : pi0 n (fun m => r m.unpair.1 m.unpair.2)) :
     pi0 n (fun x => ∀ y < x, r x y) :=
   pi0.forall_lt_primrec hr Primrec.id
 
 /-! sigma0 is closed under bounded existential quantification -/
 
-theorem sigma0.exists_lt_primrec : sigma0 n (fun z => s z.unpair.1 z.unpair.2) → Primrec g →
+theorem sigma0.exists_lt_primrec : sigma0 n (fun m => s m.unpair.1 m.unpair.2) → Primrec g →
     sigma0 n (fun w => ∃ y < g w, s w y) := by
   intro hs hg
   -- use negation duality with pi0 and pi0.forall_lt_primrec
-  have hs' : pi0 n (fun z => ¬(s z.unpair.1 z.unpair.2)) :=
+  have hs' : pi0 n (fun m => ¬(s m.unpair.1 m.unpair.2)) :=
     sigma0.iff_not_pi0.mp hs
   have hforall : pi0 n (fun w => ∀ y < g w, ¬(s w y)) :=
     pi0.forall_lt_primrec (s := fun x y => ¬(s x y)) hs' hg
@@ -457,13 +457,13 @@ theorem sigma0.exists_lt_primrec : sigma0 n (fun z => s z.unpair.1 z.unpair.2) �
     constructor <;> simp_all
   simp_all [sigma0.iff_not_pi0]
 
-theorem sigma0.exists_lt (hr : sigma0 n (fun z => r z.unpair.1 z.unpair.2)) :
+theorem sigma0.exists_lt (hr : sigma0 n (fun m => r m.unpair.1 m.unpair.2)) :
     sigma0 n (fun x => ∃ y < x, r x y) :=
   sigma0.exists_lt_primrec hr Primrec.id
 
 /-! sigma0 is closed under bounded universal quantification -/
 
-theorem sigma0.forall_lt_primrec : sigma0 n (fun z => s z.unpair.1 z.unpair.2) → Primrec g →
+theorem sigma0.forall_lt_primrec : sigma0 n (fun m => s m.unpair.1 m.unpair.2) → Primrec g →
     sigma0 n (fun w => ∀ y < g w, s w y) := by
   induction n with
   | zero =>
@@ -477,8 +477,8 @@ theorem sigma0.forall_lt_primrec : sigma0 n (fun z => s z.unpair.1 z.unpair.2) �
       intro a c
       have := congrFun heq (pair a c)
       simp_all
-    have hg : Primrec (fun z : ℕ => pair (pair z.unpair.1.unpair.1 z.unpair.2)
-          (seqDecode z.unpair.1.unpair.2 z.unpair.2)) :=
+    have hg : Primrec (fun m : ℕ => pair (pair m.unpair.1.unpair.1 m.unpair.2)
+          (seqDecode m.unpair.1.unpair.2 m.unpair.2)) :=
       Primrec₂.natPair.comp
         (Primrec₂.natPair.comp
           (Primrec.fst.comp (Primrec.unpair.comp (Primrec.fst.comp Primrec.unpair)))
@@ -507,17 +507,17 @@ theorem sigma0.forall_lt_primrec : sigma0 n (fun z => s z.unpair.1 z.unpair.2) �
         simp_all only [Nat.pair_unpair]
         aesop
 
-theorem sigma0.forall_lt (hr : sigma0 n (fun z => r z.unpair.1 z.unpair.2)) :
+theorem sigma0.forall_lt (hr : sigma0 n (fun m => r m.unpair.1 m.unpair.2)) :
     sigma0 n (fun x => ∀ y < x, r x y) :=
   sigma0.forall_lt_primrec hr Primrec.id
 
 /-! pi0 is closed under bounded existential quantification -/
 
-theorem pi0.exists_lt_primrec : pi0 n (fun z => s z.unpair.1 z.unpair.2) → Primrec g →
+theorem pi0.exists_lt_primrec : pi0 n (fun m => s m.unpair.1 m.unpair.2) → Primrec g →
     pi0 n (fun w => ∃ y < g w, s w y) := by
   intro hs hg
   -- use negation duality with sigma0 and sigma0.forall_lt_primrec
-  have hs' : sigma0 n (fun z => ¬(s z.unpair.1 z.unpair.2)) :=
+  have hs' : sigma0 n (fun m => ¬(s m.unpair.1 m.unpair.2)) :=
     pi0.iff_not_sigma0.mp hs
   have hforall : sigma0 n (fun w => ∀ y < g w, ¬(s w y)) :=
     sigma0.forall_lt_primrec (s := fun x y => ¬(s x y)) hs' hg
@@ -527,7 +527,7 @@ theorem pi0.exists_lt_primrec : pi0 n (fun z => s z.unpair.1 z.unpair.2) → Pri
     constructor <;> simp_all
   simp_all [sigma0.iff_not_pi0]
 
-theorem pi0.exists_lt (hR : pi0 n (fun z => r z.unpair.1 z.unpair.2)) :
+theorem pi0.exists_lt (hR : pi0 n (fun m => r m.unpair.1 m.unpair.2)) :
     pi0 n (fun x => ∃ y < x, r x y) :=
   pi0.exists_lt_primrec hR Primrec.id
 
