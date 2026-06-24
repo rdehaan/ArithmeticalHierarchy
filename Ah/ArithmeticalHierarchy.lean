@@ -927,9 +927,9 @@ theorem pi0_subset_sigma0_iff_collapse : (∀ p, pi0 n p → sigma0 n p) ↔
 
 /-! Inseparability of haltingSet and haltingSetCompl by delta0 sets -/
 
-theorem haltingSet_inseparable : ¬(∃ q : ℕ → Prop, delta0 (n + 1) q) ∧
+theorem haltingSet_inseparable : ¬(∃ q : ℕ → Prop, delta0 (n + 1) q ∧
     (∀ x, haltingSet (n + 1) x → q x) ∧
-    (∀ x, haltingSetCompl (n + 1) x → ¬(q x)) := by
+    (∀ x, haltingSetCompl (n + 1) x → ¬(q x))) := by
   sorry
 
 
