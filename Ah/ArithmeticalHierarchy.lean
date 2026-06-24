@@ -774,7 +774,7 @@ theorem haltingSet_mem_sigma0 (n : ℕ) : sigma0 n (haltingSet n) := haltingSet_
 
 theorem haltingSetCompl_mem_pi0 (n : ℕ) : pi0 n (haltingSetCompl n) := haltingSet_level.2
 
-/-! Completeness of the halting set and its complement for first level -/
+/-! Completeness of the halting set and its complement for the first level -/
 
 theorem haltingSet_one_sigma0_complete : sigma0Complete 1 (haltingSet 1) := by
   refine ⟨haltingSet_mem_sigma0 1, fun q hq => ?_⟩
@@ -826,14 +826,111 @@ theorem haltingSetCompl_one_not_sigma0_one : ¬(sigma0 1 (haltingSetCompl 1)) :=
   rw [← delta0.one_iff_computable]
   exact ⟨h, haltingSetCompl_mem_pi0 1⟩
 
+/-! Section completeness of the halting set -/
 
-/-! ## Higher-level completeness -/
+theorem haltingSet_section :
+    (∀ s : ℕ → Prop, sigma0 (n + 1) s →
+      ∃ c : ℕ, ∀ m, s m ↔ haltingSet (n + 1) (Nat.pair c m)) ∧
+    (∀ s : ℕ → Prop, pi0 (n + 1) s →
+      ∃ c : ℕ, ∀ m, s m ↔ haltingSetCompl (n + 1) (Nat.pair c m)) := by
+  sorry
 
-/-! TODO -/
+
+/-! ## Completeness for higher levels -/
+
+private theorem haltingSetCompl_pad (hg : Computable g) : ∃ f : ℕ → ℕ, Computable f ∧
+      ∀ x, (∃ y, haltingSetCompl (n + 1) (g (pair x y))) ↔ haltingSet (n + 2) (f x) := by
+  sorry
+
+private theorem haltingSet_sigma_step (ih : pi0Complete (n + 1) (haltingSetCompl (n + 1)))
+    (hq : sigma0 (n + 2) q) : q ≤₀ haltingSet (n + 2) := by
+  sorry
+
+private theorem haltingSet_pi_step (ih : sigma0Complete (n + 1) (haltingSet (n + 1)))
+    (hq : pi0 (n + 2) q) : q ≤₀ haltingSetCompl (n + 2) := by
+  sorry
+
+private theorem haltingSet_complete :
+    sigma0Complete (n + 1) (haltingSet (n + 1)) ∧
+    pi0Complete (n + 1) (haltingSetCompl (n + 1)) := by
+  sorry
+
+theorem haltingSet_sigma0_complete : sigma0Complete (n + 1) (haltingSet (n + 1)) :=
+  haltingSet_complete.1
+
+theorem haltingSetCompl_pi0_complete : pi0Complete (n + 1) (haltingSetCompl (n + 1)) :=
+  haltingSet_complete.2
 
 
 /-! ## Strictness of the hierarchy -/
 
-/-! TODO -/
+/-! Basic strictness results -/
+
+theorem haltingSet_succ_not_computable : ¬(ComputablePred (haltingSet (n + 1))) := by
+  sorry
+
+theorem haltingSet_not_pi0 : ¬(pi0 (n + 1) (haltingSet (n + 1))) := by
+  sorry
+
+theorem haltingSetCompl_not_sigma0 : ¬(sigma0 (n + 1) (haltingSetCompl (n + 1))) := by
+  sorry
+
+theorem exists_sigma0_not_pi0 : ∃ p : ℕ → Prop, sigma0 (n + 1) p ∧ ¬(pi0 (n + 1) p) := by
+  sorry
+
+theorem exists_pi0_not_sigma0 : ∃ p : ℕ → Prop, pi0 (n + 1) p ∧ ¬(sigma0 (n + 1) p) := by
+  sorry
+
+theorem sigma0_strict : (∀ p, sigma0 n p → sigma0 (n + 1) p) ∧
+    ¬(∀ p, sigma0 (n + 1) p → sigma0 n p) := by
+  sorry
+
+theorem pi0_strict : (∀ p, pi0 n p → pi0 (n + 1) p) ∧
+    ¬(∀ p, pi0 (n + 1) p → pi0 n p) := by
+  sorry
+
+theorem delta0_strict_sigma0 : ∃ p : ℕ → Prop, sigma0 (n + 1) p ∧ ¬(delta0 (n + 1) p) := by
+  sorry
+
+theorem delta0_strict_pi0 : ∃ p : ℕ → Prop, pi0 (n + 1) p ∧ ¬(delta0 (n + 1) p) := by
+  sorry
+
+theorem sigma0_strict_delt0 : ∃ p : ℕ → Prop, sigma0 (n + 1) p ∧ ¬(delta0 n p) := by
+  sorry
+
+theorem pi0_strict_delt0 : ∃ p : ℕ → Prop, pi0 (n + 1) p ∧ ¬(delta0 n p) := by
+  sorry
+
+/-! Strictness in terms of (inclusions for) sets of sets -/
+
+theorem sigma0_subset_sigma0_succ : {p : ℕ → Prop | sigma0 n p} ⊆ {p | sigma0 (n + 1) p} :=
+  fun _ hp => sigma0.mono_le (Nat.le_succ n) hp
+
+theorem pi0_subset_pi0_succ : {p : ℕ → Prop | pi0 n p} ⊆ {p | pi0 (n + 1) p} :=
+  fun _ hp => pi0.mono_le (Nat.le_succ n) hp
+
+theorem sigma0_proper_subset : {p : ℕ → Prop | sigma0 n p} ⊂ {p | sigma0 (n + 1) p} := by
+  sorry
+
+theorem pi0_proper_subset : {p : ℕ → Prop | pi0 n p} ⊂ {p | pi0 (n + 1) p} := by
+  sorry
+
+/-! Level collapse characterizations -/
+
+theorem sigma0_subset_pi0_iff_collapse : (∀ p, sigma0 n p → pi0 n p) ↔
+    (∀ p, sigma0 n p ↔ pi0 n p) := by
+  sorry
+
+theorem pi0_subset_sigma0_iff_collapse : (∀ p, pi0 n p → sigma0 n p) ↔
+    (∀ p, pi0 n p ↔ sigma0 n p) := by
+  sorry
+
+/-! Inseparability of haltingSet and haltingSetCompl by delta0 sets -/
+
+theorem haltingSet_inseparable : ¬(∃ q : ℕ → Prop, delta0 (n + 1) q) ∧
+    (∀ x, haltingSet (n + 1) x → q x) ∧
+    (∀ x, haltingSetCompl (n + 1) x → ¬(q x)) := by
+  sorry
+
 
 end Computability
