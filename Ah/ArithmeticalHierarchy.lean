@@ -777,7 +777,23 @@ theorem haltingSetCompl_mem_pi0 (n : ℕ) : pi0 n (haltingSetCompl n) := halting
 /-! Completeness of the halting set and its complement for first level -/
 
 theorem haltingSet_one_sigma0_complete : sigma0Complete 1 (haltingSet 1) := by
-  sorry
+  refine ⟨haltingSet_mem_sigma0 1, fun q hq => ?_⟩
+  rw [sigma0.one_iff_re] at hq
+  obtain ⟨d, hd⟩ := Nat.Partrec.Code.exists_code.mp
+    (Partrec.nat_iff.mp (hq.map (Computable.const 0).to₂))
+  refine ⟨fun x => Nat.pair (Encodable.encode d) x, ?_, ?_⟩
+  · exact (Primrec₂.natPair.comp (Primrec.const (Encodable.encode d)) Primrec.id).to_comp
+  · intro m
+    rw [haltingSet_one]
+    have hof : ofNatCode (Encodable.encode d) = d := by
+      rw [← Nat.Partrec.Code.ofNatCode_eq]
+      simp_all [Denumerable.ofNat_encode]
+    simp only [Nat.unpair_pair, hof, hd]
+    constructor
+    · intro h
+      exact ⟨h, trivial⟩
+    · intro h
+      exact h.fst
 
 theorem haltingSet_one_not_computable : ¬(ComputablePred (haltingSet 1)) := by
   sorry
