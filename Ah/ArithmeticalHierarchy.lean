@@ -33,7 +33,7 @@ This file defines the arithmetical hierarchy of predicates on `ℕ`.
 -/
 
 open Nat (pair unpair)
--- open Nat.Partrec.Code (eval evaln evaln_complete evaln_sound ofNatCode)
+open Nat.Partrec.Code (eval evaln evaln_complete evaln_sound ofNatCode)
 
 namespace Computability
 
@@ -393,9 +393,9 @@ theorem pi0.or (hp : pi0 n p) (hq : pi0 n q) : pi0 n (fun x => p x ∨ q x) :=
   bool_aux.2.2.2 p q hp hq
 
 
-/-! ## Closure under bounded quantifiers -/
+/-! ## Closure under (bounded) quantifiers -/
 
-/-! pi0 closed under bounded universal quantification -/
+/-! pi0 is closed under bounded universal quantification -/
 
 theorem pi0.forall_lt_primrec : pi0 n (fun z => s z.unpair.1 z.unpair.2) → Primrec g →
     pi0 n (fun w => ∀ y < g w, s w y) := by
@@ -441,7 +441,7 @@ theorem pi0.forall_lt (hr : pi0 n (fun z => r z.unpair.1 z.unpair.2)) :
     pi0 n (fun x => ∀ y < x, r x y) :=
   pi0.forall_lt_primrec hr Primrec.id
 
-/-! sigma0 closed under bounded existential quantification -/
+/-! sigma0 is closed under bounded existential quantification -/
 
 theorem sigma0.exists_lt_primrec : sigma0 n (fun z => s z.unpair.1 z.unpair.2) → Primrec g →
     sigma0 n (fun w => ∃ y < g w, s w y) := by
@@ -461,7 +461,7 @@ theorem sigma0.exists_lt (hr : sigma0 n (fun z => r z.unpair.1 z.unpair.2)) :
     sigma0 n (fun x => ∃ y < x, r x y) :=
   sigma0.exists_lt_primrec hr Primrec.id
 
-/-! sigma0 closed under bounded universal quantification -/
+/-! sigma0 is closed under bounded universal quantification -/
 
 theorem sigma0.forall_lt_primrec : sigma0 n (fun z => s z.unpair.1 z.unpair.2) → Primrec g →
     sigma0 n (fun w => ∀ y < g w, s w y) := by
@@ -511,7 +511,7 @@ theorem sigma0.forall_lt (hr : sigma0 n (fun z => r z.unpair.1 z.unpair.2)) :
     sigma0 n (fun x => ∀ y < x, r x y) :=
   sigma0.forall_lt_primrec hr Primrec.id
 
-/-! pi0 closed under bounded existential quantification -/
+/-! pi0 is closed under bounded existential quantification -/
 
 theorem pi0.exists_lt_primrec : pi0 n (fun z => s z.unpair.1 z.unpair.2) → Primrec g →
     pi0 n (fun w => ∃ y < g w, s w y) := by
@@ -530,6 +530,38 @@ theorem pi0.exists_lt_primrec : pi0 n (fun z => s z.unpair.1 z.unpair.2) → Pri
 theorem pi0.exists_lt (hR : pi0 n (fun z => r z.unpair.1 z.unpair.2)) :
     pi0 n (fun x => ∃ y < x, r x y) :=
   pi0.exists_lt_primrec hR Primrec.id
+
+/-! delta0 is closed under bounded quantifiers -/
+
+theorem delta0.exists_lt (hr : delta0 n (fun m => r m.unpair.1 m.unpair.2)) :
+    delta0 n (fun m => ∃ k < m, r m k) :=
+  ⟨sigma0.exists_lt hr.1, pi0.exists_lt hr.2⟩
+
+theorem delta0.forall_lt (hr : delta0 n (fun m => r m.unpair.1 m.unpair.2)) :
+    delta0 n (fun m => ∀ k < m, r m k) :=
+  ⟨sigma0.forall_lt hr.1, pi0.forall_lt hr.2⟩
+
+theorem delta0.exists_lt_primrec : delta0 n (fun m => s m.unpair.1 m.unpair.2) → Primrec g →
+    delta0 n (fun m => ∃ k < g m, s m k) := by
+  intro hs hg
+  exact ⟨sigma0.exists_lt_primrec hs.1 hg, pi0.exists_lt_primrec hs.2 hg⟩
+
+theorem delta0.forall_lt_primrec : delta0 n (fun m => s m.unpair.1 m.unpair.2) → Primrec g →
+    delta0 n (fun m => ∀ k < g m, s m k) := by
+  intro hs hg
+  exact ⟨sigma0.forall_lt_primrec hs.1 hg, pi0.forall_lt_primrec hs.2 hg⟩
+
+/-! sigma0 is closed under unbounded existential quantification -/
+
+theorem sigma0.exists_succ (h : sigma0 (n + 1) q) :
+    sigma0 (n + 1) (fun x => ∃ y, q (pair x y)) := by
+  sorry
+
+/-! pi0 is closed under unbounded universal quantification -/
+
+theorem pi0.forall_succ (h : pi0 (n + 1) q) :
+    pi0 (n + 1) (fun x => ∀ y, q (pair x y)) := by
+  sorry
 
 
 /-! ## Characterization of the first level -/
@@ -559,6 +591,147 @@ theorem sigma0.of_computable (hn : 1 ≤ n) (h : ComputablePred p) : sigma0 n p 
 theorem pi0.of_computable (hn : 1 ≤ n) (h : ComputablePred p) : pi0 n p := by
   rw [← delta0.one_iff_computable, delta0] at h
   exact pi0.mono_le (n := 1) (m := n) hn h.right
+
+
+/-! ## Completeness -/
+
+/-! Definitions and basic infrastructure -/
+
+def sigma0Complete (n : ℕ) (p : ℕ → Prop) : Prop := sigma0 n p ∧ ∀ q : ℕ → Prop, sigma0 n q → q ≤₀ p
+
+def pi0Complete (n : ℕ) (p : ℕ → Prop) : Prop := pi0 n p ∧ ∀ q : ℕ → Prop, pi0 n q → q ≤₀ p
+
+def sigma0Hard (n : ℕ) (p : ℕ → Prop) : Prop := ∀ q : ℕ → Prop, sigma0 n q → q ≤₀ p
+
+def pi0Hard (n : ℕ) (p : ℕ → Prop) : Prop := ∀ q : ℕ → Prop, pi0 n q → q ≤₀ p
+
+theorem sigma0Complete.iff_mem_hard : sigma0Complete n p ↔ sigma0 n p ∧ sigma0Hard n p := by rfl
+
+theorem pi0Complete.iff_mem_hard : pi0Complete n p ↔ pi0 n p ∧ pi0Hard n p := by rfl
+
+theorem sigma0Complete.mk (hmem : sigma0 n p) (hhard : sigma0Hard n p) : sigma0Complete n p :=
+  ⟨hmem, hhard⟩
+
+theorem pi0Complete.mk (hmem : pi0 n p) (hhard : pi0Hard n p) : pi0Complete n p :=
+  ⟨hmem, hhard⟩
+
+theorem sigma0Hard.of_manyOneReducible (hq : sigma0Hard n q) (hred : q ≤₀ p) : sigma0Hard n p :=
+  fun q' hq' => (hq q' hq').trans hred
+
+theorem pi0Hard.of_manyOneReducible (hq : pi0Hard n q) (hred : q ≤₀ p) : pi0Hard n p :=
+  fun q' hq' => (hq q' hq').trans hred
+
+theorem sigma0Complete.of_manyOneReducible
+    (hq : sigma0Complete n q) (hp : sigma0 n p) (hred : q ≤₀ p) : sigma0Complete n p :=
+  ⟨hp, sigma0Hard.of_manyOneReducible hq.2 hred⟩
+
+theorem pi0Complete.of_manyOneReducible
+    (hq : pi0Complete n q) (hp : pi0 n p) (hred : q ≤₀ p) : pi0Complete n p :=
+  ⟨hp, pi0Hard.of_manyOneReducible hq.2 hred⟩
+
+/-! The halting set -/
+
+mutual
+
+/-- The halting set and its complement set
+
+The program code `m.unpair.1` and the input `m.unpair.2` are kept in the top-level pairing
+inside the recursive definition, to simplify bookkeeping. -/
+def haltingSet : ℕ → (ℕ → Prop)
+  | 0     => fun m => evaln 0 (ofNatCode m.unpair.1) m.unpair.2 ≠ none
+  | 1     => fun m => (eval (ofNatCode m.unpair.1) m.unpair.2).Dom
+  | n + 2 => fun m => ∃ y, haltingSetCompl (n + 1) (Nat.pair m.unpair.1 (Nat.pair m.unpair.2 y))
+
+def haltingSetCompl : ℕ → (ℕ → Prop)
+  | 0     => fun m => evaln 0 (ofNatCode m.unpair.1) m.unpair.2 = none
+  | 1     => fun m => ¬ (eval (ofNatCode m.unpair.1) m.unpair.2).Dom
+  | n + 2 => fun m => ∀ y, haltingSet (n + 1) (Nat.pair m.unpair.1 (Nat.pair m.unpair.2 y))
+
+end
+
+@[simp]
+theorem haltingSet_zero : haltingSet 0 = fun m =>
+    evaln 0 (ofNatCode m.unpair.1) m.unpair.2 ≠ none := rfl
+
+@[simp]
+theorem haltingSet_one : haltingSet 1 = fun m =>
+    (eval (ofNatCode m.unpair.1) m.unpair.2).Dom := rfl
+
+@[simp]
+theorem haltingSet_succ_succ (n : ℕ) : haltingSet (n + 2) = fun m =>
+      ∃ y, haltingSetCompl (n + 1) (Nat.pair m.unpair.1 (Nat.pair m.unpair.2 y)) := rfl
+
+@[simp]
+theorem haltingSetCompl_zero : haltingSetCompl 0 = fun m =>
+    evaln 0 (ofNatCode m.unpair.1) m.unpair.2 = none := rfl
+
+@[simp]
+theorem haltingSetCompl_one : haltingSetCompl 1 = fun m =>
+    ¬(eval (ofNatCode m.unpair.1) m.unpair.2).Dom := rfl
+
+@[simp]
+theorem haltingSetCompl_succ_succ (n : ℕ) :
+    haltingSetCompl (n + 2) = fun m =>
+      ∀ y, haltingSet (n + 1) (Nat.pair m.unpair.1 (Nat.pair m.unpair.2 y)) := rfl
+
+/-! Complementarity of haltingSet and haltingSetCompl -/
+
+theorem haltingSet_compl (n : ℕ) (m : ℕ) : haltingSetCompl n m ↔ ¬(haltingSet n m) := by
+  match n with
+  | 0 => simp
+  | 1 => simp
+  | n + 2 =>
+    simp only [haltingSetCompl_succ_succ, haltingSet_succ_succ, not_exists]
+    refine forall_congr' fun y => ?_
+    have := haltingSet_compl (n + 1) (Nat.pair m.unpair.1 (Nat.pair m.unpair.2 y))
+    simp_all
+
+/-! Membership in the halting set depends on the code only through eval -/
+
+theorem haltingSet_eval_congr_both (c c' : ℕ) (h : eval (ofNatCode c) = eval (ofNatCode c')) :
+    ∀ a : ℕ, (haltingSet (n + 1) (Nat.pair c a) ↔ haltingSet (n + 1) (Nat.pair c' a)) ∧
+      (haltingSetCompl (n + 1) (Nat.pair c a) ↔ haltingSetCompl (n + 1) (Nat.pair c' a)) := by
+  sorry
+
+theorem haltingSet_eval_congr (c c' : ℕ) (h : eval (ofNatCode c) = eval (ofNatCode c')) (m : ℕ) :
+    haltingSet (n + 1) (Nat.pair c m) ↔ haltingSet (n + 1) (Nat.pair c' m) :=
+  (haltingSet_eval_congr_both c c' h m).1
+
+theorem haltingSetCompl_eval_congr (c c' : ℕ) (h : eval (ofNatCode c) = eval (ofNatCode c'))
+    (m : ℕ) : haltingSetCompl (n + 1) (Nat.pair c m) ↔ haltingSetCompl (n + 1) (Nat.pair c' m) :=
+  (haltingSet_eval_congr_both c c' h m).2
+
+/-! Inclusion of halting set and its complement in the corresponding levels of the hierarchy -/
+
+private theorem haltingSet_level : sigma0 n (haltingSet n) ∧ pi0 n (haltingSetCompl n) := by
+  sorry
+
+theorem haltingSet_mem_sigma0 (n : ℕ) : sigma0 n (haltingSet n) := haltingSet_level.1
+
+theorem haltingSetCompl_mem_pi0 (n : ℕ) : pi0 n (haltingSetCompl n) := haltingSet_level.2
+
+/-! Completeness of the halting set and its complement for first level -/
+
+theorem haltingSet_one_sigma0_complete : sigma0Complete 1 (haltingSet 1) := by
+  sorry
+
+theorem haltingSet_one_not_computable : ¬(ComputablePred (haltingSet 1)) := by
+  sorry
+
+theorem haltingSet_one_not_pi0_one : ¬(pi0 1 (haltingSet 1)) := by
+  sorry
+
+theorem ManyOneReducible.compl (h : p ≤₀ q) : (fun x => ¬ p x) ≤₀ (fun x => ¬ q x) := by
+  sorry
+
+theorem haltingSetCompl_one_pi0_complete : pi0Complete 1 (haltingSetCompl 1) := by
+  sorry
+
+theorem haltingSetCompl_one_not_computable : ¬(ComputablePred (haltingSetCompl 1)) := by
+  sorry
+
+theorem haltingSetCompl_one_not_sigma0_one : ¬(sigma0 1 (haltingSetCompl 1)) := by
+  sorry
 
 
 end Computability
