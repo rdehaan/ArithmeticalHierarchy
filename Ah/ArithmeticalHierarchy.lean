@@ -33,11 +33,11 @@ This file defines the arithmetical hierarchy of predicates on `ℕ`.
 -/
 
 open Nat (pair unpair)
-open Nat.Partrec.Code (eval evaln evaln_complete evaln_sound ofNatCode)
+-- open Nat.Partrec.Code (eval evaln evaln_complete evaln_sound ofNatCode)
 
 namespace Computability
 
-variable {n m : ℕ} {p : ℕ → Prop} {f : ℕ → ℕ}
+variable {n m : ℕ} {p q : ℕ → Prop} {f b : ℕ → ℕ} {R S : ℕ → ℕ → Prop}
 
 mutual
 
@@ -66,7 +66,7 @@ i.e., both Σ⁰ₙ and Π⁰ₙ. -/
 def delta0 (n : ℕ) (p : ℕ → Prop) : Prop := sigma0 n p ∧ pi0 n p
 
 
-/-! ### Unfolding lemmas -/
+/-! Unfolding lemmas -/
 
 @[simp]
 theorem sigma0.zero_eq (p : ℕ → Prop) : sigma0 0 p = PrimrecPred p := rfl
@@ -83,20 +83,17 @@ theorem pi0.succ_eq (n : ℕ) (p : ℕ → Prop) :
     pi0 (n + 1) p = ∃ q : ℕ → Prop, sigma0 n q ∧ p = fun x => ∀ y, q (pair x y) := rfl
 
 
-/-! ### Level 0 is exactly `PrimrecPred` -/
+/-! ## Basic properties -/
 
-/-- A predicate is Σ⁰₀ iff it is primitive recursive. -/
+/-! Level 0 coincides with `PrimrecPred` -/
+
 theorem sigma0.zero_iff : sigma0 0 p ↔ PrimrecPred p := by rfl
 
-/-- A predicate is Π⁰₀ iff it is primitive recursive. -/
 theorem pi0.zero_iff : pi0 0 p ↔ PrimrecPred p := by rfl
 
-/-- A predicate is Δ⁰₀ iff it is primitive recursive. -/
-theorem delta0.zero_iff : delta0 0 p ↔ PrimrecPred p := by
-  simp [delta0]
+theorem delta0.zero_iff : delta0 0 p ↔ PrimrecPred p := by simp [delta0]
 
-
-/-! ### Basic properties -/
+/-! Monotonicity properties -/
 
 private theorem mono_aux :
     (∀ p : ℕ → Prop, sigma0 n p → sigma0 (n + 1) p) ∧
@@ -146,6 +143,57 @@ theorem pi0.of_primrec (h : PrimrecPred p) : pi0 n p := by
   | zero => exact h
   | succ n ih => exact ih.mono
 
+
+/-! Closure under primitive recursion -/
+
+private theorem comp_aux :
+    (∀ (p : ℕ → Prop) (f : ℕ → ℕ), sigma0 n p → Primrec f → sigma0 n (fun x => p (f x))) ∧
+    (∀ (p : ℕ → Prop) (f : ℕ → ℕ), pi0 n p → Primrec f → pi0 n (fun x => p (f x))) := by
+  induction n with
+  | zero =>
+    exact ⟨fun p f hp hf => PrimrecPred.comp hp hf,
+           fun p f hp hf => PrimrecPred.comp hp hf⟩
+  | succ n ih =>
+    have h_unpack : ∀ f : ℕ → ℕ, Primrec f →
+        Primrec (fun z : ℕ => pair (f z.unpair.1) z.unpair.2) := fun f hf =>
+      Primrec₂.natPair.comp (hf.comp (Primrec.fst.comp Primrec.unpair))
+        (Primrec.snd.comp Primrec.unpair)
+    refine ⟨fun p f hp hf => ?_, fun p f hp hf => ?_⟩
+    · obtain ⟨q, hq, rfl⟩ := hp
+      refine ⟨fun z => q (pair (f z.unpair.1) z.unpair.2), ?_, ?_⟩
+      · exact ih.2 q _ hq (h_unpack f hf)
+      · funext x
+        simp
+    · obtain ⟨q, hq, rfl⟩ := hp
+      refine ⟨fun z => q (pair (f z.unpair.1) z.unpair.2), ?_, ?_⟩
+      · exact ih.1 q _ hq (h_unpack f hf)
+      · funext x
+        simp
+
+theorem sigma0.comp_primrec (hp : sigma0 n p) (hf : Primrec f) : sigma0 n (fun x => p (f x)) :=
+  comp_aux.1 p f hp hf
+
+theorem pi0.comp_primrec (hp : pi0 n p) (hf : Primrec f) : pi0 n (fun x => p (f x)) :=
+  comp_aux.2 p f hp hf
+
+
+/-! Trivial (crossing) inclusions -/
+
+theorem sigma0.of_pi0_succ (h : pi0 n p) : sigma0 (n + 1) p := by
+  refine ⟨fun z => p z.unpair.1, pi0.comp_primrec h (Primrec.fst.comp Primrec.unpair), ?_⟩
+  funext x
+  simp
+
+theorem pi0.of_sigma0_succ (h : sigma0 n p) : pi0 (n + 1) p := by
+  refine ⟨fun z => p z.unpair.1, sigma0.comp_primrec h (Primrec.fst.comp Primrec.unpair), ?_⟩
+  funext x
+  simp
+
+
+/-! ## Behavior under Boolean operators -/
+
+/-! Negation duality -/
+
 private theorem neg_aux :
     (∀ p : ℕ → Prop, sigma0 n p → pi0 n (fun x => ¬ p x)) ∧
     (∀ p : ℕ → Prop, pi0 n p → sigma0 n (fun x => ¬ p x)) := by
@@ -179,45 +227,7 @@ theorem sigma0.iff_not_pi0 : sigma0 n p ↔ pi0 n (fun x => ¬ p x) := by
     have := neg_aux.2 _ h
     simp_all
 
-private theorem comp_aux :
-    (∀ (p : ℕ → Prop) (f : ℕ → ℕ), sigma0 n p → Primrec f → sigma0 n (fun x => p (f x))) ∧
-    (∀ (p : ℕ → Prop) (f : ℕ → ℕ), pi0 n p → Primrec f → pi0 n (fun x => p (f x))) := by
-  induction n with
-  | zero =>
-    exact ⟨fun p f hp hf => PrimrecPred.comp hp hf,
-           fun p f hp hf => PrimrecPred.comp hp hf⟩
-  | succ n ih =>
-    have h_unpack : ∀ f : ℕ → ℕ, Primrec f →
-        Primrec (fun z : ℕ => pair (f z.unpair.1) z.unpair.2) := fun f hf =>
-      Primrec₂.natPair.comp (hf.comp (Primrec.fst.comp Primrec.unpair))
-        (Primrec.snd.comp Primrec.unpair)
-    refine ⟨fun p f hp hf => ?_, fun p f hp hf => ?_⟩
-    · obtain ⟨q, hq, rfl⟩ := hp
-      refine ⟨fun z => q (pair (f z.unpair.1) z.unpair.2), ?_, ?_⟩
-      · exact ih.2 q _ hq (h_unpack f hf)
-      · funext x
-        simp
-    · obtain ⟨q, hq, rfl⟩ := hp
-      refine ⟨fun z => q (pair (f z.unpair.1) z.unpair.2), ?_, ?_⟩
-      · exact ih.1 q _ hq (h_unpack f hf)
-      · funext x
-        simp
-
-theorem sigma0.comp_primrec (hp : sigma0 n p) (hf : Primrec f) : sigma0 n (fun x => p (f x)) :=
-  comp_aux.1 p f hp hf
-
-theorem pi0.comp_primrec (hp : pi0 n p) (hf : Primrec f) : pi0 n (fun x => p (f x)) :=
-  comp_aux.2 p f hp hf
-
-theorem sigma0.of_pi0_succ (h : pi0 n p) : sigma0 (n + 1) p := by
-  refine ⟨fun z => p z.unpair.1, pi0.comp_primrec h (Primrec.fst.comp Primrec.unpair), ?_⟩
-  funext x
-  simp
-
-theorem pi0.of_sigma0_succ (h : sigma0 n p) : pi0 (n + 1) p := by
-  refine ⟨fun z => p z.unpair.1, sigma0.comp_primrec h (Primrec.fst.comp Primrec.unpair), ?_⟩
-  funext x
-  simp
+/-! Closure under and/or -/
 
 private theorem bool_aux :
     (∀ p q : ℕ → Prop, sigma0 n p → sigma0 n q → sigma0 n (fun x => p x ∧ q x)) ∧
@@ -296,5 +306,52 @@ theorem pi0.and (hp : pi0 n p) (hq : pi0 n q) : pi0 n (fun x => p x ∧ q x) :=
 
 theorem pi0.or (hp : pi0 n p) (hq : pi0 n q) : pi0 n (fun x => p x ∨ q x) :=
   bool_aux.2.2.2 p q hp hq
+
+
+/-! ## Closure under bounded quantifiers -/
+
+/-! sigma0 closed under bounded existential quantification -/
+
+theorem sigma0.exists_lt (hR : sigma0 n (fun z => R z.unpair.1 z.unpair.2)) :
+    sigma0 n (fun x => ∃ y < x, R x y) := by
+  sorry
+
+theorem sigma0.exists_lt_primrec : sigma0 n (fun z => S z.unpair.1 z.unpair.2) → Primrec b →
+    sigma0 n (fun w => ∃ y < b w, S w y) := by
+  sorry
+
+/-! pi0 closed under bounded universal quantification -/
+
+private theorem PrimrecPred.forall_lt_pair (hS : PrimrecPred (fun z : ℕ => S z.unpair.1 z.unpair.2))
+    (hb : Primrec b) : PrimrecPred (fun w : ℕ => ∀ y < b w, S w y) := by
+  sorry
+
+theorem pi0.forall_lt (hR : pi0 n (fun z => R z.unpair.1 z.unpair.2)) :
+    pi0 n (fun x => ∀ y < x, R x y) := by
+  sorry
+
+theorem pi0.forall_lt_primrec : pi0 n (fun z => S z.unpair.1 z.unpair.2) → Primrec b →
+    pi0 n (fun w => ∀ y < b w, S w y) := by
+  sorry
+
+/-! sigma0 closed under bounded universal quantification -/
+
+theorem sigma0.forall_lt (hR : sigma0 n (fun z => R z.unpair.1 z.unpair.2)) :
+    sigma0 n (fun x => ∀ y < x, R x y) := by
+  sorry
+
+theorem sigma0.forall_lt_primrec : sigma0 n (fun z => S z.unpair.1 z.unpair.2) → Primrec b →
+    sigma0 n (fun w => ∀ y < b w, S w y) := by
+  sorry
+
+/-! pi0 closed under bounded existential quantification -/
+
+theorem pi0.exists_lt (hR : pi0 n (fun z => R z.unpair.1 z.unpair.2)) :
+    pi0 n (fun x => ∃ y < x, R x y) := by
+  sorry
+
+theorem pi0.exists_lt_primrec : pi0 n (fun z => S z.unpair.1 z.unpair.2) → Primrec b →
+    pi0 n (fun w => ∃ y < b w, S w y) := by
+  sorry
 
 end Computability
