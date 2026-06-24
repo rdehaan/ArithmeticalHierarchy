@@ -23,6 +23,7 @@ This file defines the arithmetical hierarchy of predicates on `ℕ`.
 * `sigma0 n p` : the predicate `p : ℕ → Prop` is Σ⁰ₙ.
 * `pi0 n p`    : the predicate `p : ℕ → Prop` is Π⁰ₙ.
 * `delta0 n p` : the predicate `p : ℕ → Prop` is Δ⁰ₙ (i.e. both Σ⁰ₙ and Π⁰ₙ).
+* TODO
 
 ## Main results
 
@@ -30,6 +31,7 @@ This file defines the arithmetical hierarchy of predicates on `ℕ`.
 * `sigma0.one_iff_re`  : Σ⁰₁ = recursively enumerable predicates (`REPred`).
 * `pi0.one_iff_co_re`  : Π⁰₁ = co-r.e. predicates.
 * `delta0.one_iff_computable` : Δ⁰₁ = computable predicates (`ComputablePred`), i.e. Post's theorem.
+* TODO
 -/
 
 open Nat (pair unpair)
@@ -564,6 +566,34 @@ theorem pi0.forall_succ (h : pi0 (n + 1) q) :
   sorry
 
 
+/-! ## Closure under computable substitution and many-one reducibility -/
+
+/-! Closure under computable substitution -/
+
+theorem sigma0.comp_computable (hp : sigma0 (n + 1) p) (hf : Computable f) :
+    sigma0 (n + 1) (fun x => p (f x)) := by
+  sorry
+
+theorem pi0.comp_computable (hp : pi0 (n + 1) p) (hf : Computable f) :
+    pi0 (n + 1) (fun x => p (f x)) := by
+  sorry
+
+theorem delta0.comp_computable (hp : delta0 (n + 1) p) (hf : Computable f) :
+    delta0 (n + 1) (fun x => p (f x)) :=
+  ⟨sigma0.comp_computable hp.1 hf, pi0.comp_computable hp.2 hf⟩
+
+/-! Downward closure under many-one reducibility -/
+
+theorem sigma0.of_manyOneReducible (hred : p ≤₀ q) (hq : sigma0 (n + 1) q) : sigma0 (n + 1) p := by
+  sorry
+
+theorem pi0.of_manyOneReducible (hred : p ≤₀ q) (hq : pi0 (n + 1) q) : pi0 (n + 1) p := by
+  sorry
+
+theorem delta0.of_manyOneReducible (hred : p ≤₀ q) (hq : delta0 (n + 1) q) : delta0 (n + 1) p :=
+  ⟨sigma0.of_manyOneReducible hred hq.1, pi0.of_manyOneReducible hred hq.2⟩
+
+
 /-! ## Characterization of the first level -/
 
 private theorem sigma0.one_to_re (h : sigma0 1 p) : REPred p := by
@@ -733,5 +763,14 @@ theorem haltingSetCompl_one_not_computable : ¬(ComputablePred (haltingSetCompl 
 theorem haltingSetCompl_one_not_sigma0_one : ¬(sigma0 1 (haltingSetCompl 1)) := by
   sorry
 
+
+/-! ## Higher-level completeness -/
+
+/-! TODO -/
+
+
+/-! ## Strictness of the hierarchy -/
+
+/-! TODO -/
 
 end Computability
