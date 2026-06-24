@@ -258,12 +258,13 @@ private theorem exists_seqDecode (x : ℕ) (w : ℕ → ℕ) :
 
 private theorem bounded_collection :
     (∀ m < n, ∃ k, r m k) ↔ ∃ s : ℕ, ∀ m < n, r m (seqDecode s m) := by
-  -- constructor;
-  -- · intro h
-  --   obtain ⟨s, hs⟩ := exists_seqDecode x (fun y => if hy : y < x then (h y hy).choose else 0);
-  --   exact ⟨ s, fun y hy => by simpa [hs y hy, hy] using ( h y hy ).choose_spec ⟩;
-  -- · exact fun ⟨ s, hs ⟩ y hy => ⟨ _, hs y hy ⟩
-  sorry
+  constructor
+  · intro h
+    obtain ⟨s, hs⟩ := exists_seqDecode n (fun m => if hm : m < n then (h m hm).choose else 0)
+    refine ⟨s, fun m hm => ?_⟩
+    simp_all [(h m hm).choose_spec]
+  · intro ⟨s, hs⟩ m hm
+    exact ⟨_, hs m hm⟩
 
 
 /-! ## Behavior under Boolean operators -/
