@@ -532,4 +532,33 @@ theorem pi0.exists_lt (hR : pi0 n (fun z => r z.unpair.1 z.unpair.2)) :
   pi0.exists_lt_primrec hR Primrec.id
 
 
+/-! ## Characterization of the first level -/
+
+private theorem sigma0.one_to_re (h : sigma0 1 p) : REPred p := by
+  sorry
+
+private theorem re_to_sigma0_one (h : REPred p) : sigma0 1 p := by
+  sorry
+
+theorem sigma0.one_iff_re : sigma0 1 p ↔ REPred p :=
+  ⟨sigma0.one_to_re, re_to_sigma0_one⟩
+
+theorem pi0.one_iff_co_re : pi0 1 p ↔ REPred (fun x => ¬(p x)) := by
+  rw [pi0.iff_not_sigma0, sigma0.one_iff_re]
+
+theorem delta0.one_iff_computable : delta0 1 p ↔ ComputablePred p := by
+  rw [delta0, sigma0.one_iff_re, pi0.one_iff_co_re]
+  exact ComputablePred.computable_iff_re_compl_re'.symm
+
+/-! Computable functions are sigma0 and pi0 for n ≥ 1 -/
+
+theorem sigma0.of_computable (hn : 1 ≤ n) (h : ComputablePred p) : sigma0 n p := by
+  rw [← delta0.one_iff_computable, delta0] at h
+  exact sigma0.mono_le (n := 1) (m := n) hn h.left
+
+theorem pi0.of_computable (hn : 1 ≤ n) (h : ComputablePred p) : pi0 n p := by
+  rw [← delta0.one_iff_computable, delta0] at h
+  exact pi0.mono_le (n := 1) (m := n) hn h.right
+
+
 end Computability
