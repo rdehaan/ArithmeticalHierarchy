@@ -457,7 +457,47 @@ theorem sigma0.exists_lt (hr : sigma0 n (fun z => r z.unpair.1 z.unpair.2)) :
 
 theorem sigma0.forall_lt_primrec : sigma0 n (fun z => s z.unpair.1 z.unpair.2) → Primrec g →
     sigma0 n (fun w => ∀ y < g w, s w y) := by
-  sorry
+  induction n with
+  | zero =>
+    intro hs hg
+    exact PrimrecPred.forall_lt_pair hs hg
+  | succ n ih =>
+    intro hs hb
+    obtain ⟨q, hq, heq⟩ := hs
+    -- pointwise description of s
+    have key : ∀ a c : ℕ, s a c ↔ ∃ t, q (pair (pair a c) t) := by
+      intro a c
+      have := congrFun heq (pair a c)
+      simp_all
+    have hg : Primrec (fun z : ℕ => pair (pair z.unpair.1.unpair.1 z.unpair.2)
+          (seqDecode z.unpair.1.unpair.2 z.unpair.2)) :=
+      Primrec₂.natPair.comp
+        (Primrec₂.natPair.comp
+          (Primrec.fst.comp (Primrec.unpair.comp (Primrec.fst.comp Primrec.unpair)))
+          (Primrec.snd.comp Primrec.unpair))
+        (primrec₂_seqDecode.comp
+          (Primrec.snd.comp (Primrec.unpair.comp (Primrec.fst.comp Primrec.unpair)))
+          (Primrec.snd.comp Primrec.unpair))
+    refine ⟨fun m => ∀ y < g m.unpair.1,
+        q (pair (pair m.unpair.1 y) (seqDecode m.unpair.2 y)), ?_, ?_⟩
+    · -- show pi0 n
+      exact pi0.forall_lt_primrec
+        (s := (fun m y => q (pair (pair m.unpair.1 y) (seqDecode m.unpair.2 y))))
+        (pi0.comp_primrec hq hg)
+        (hb.comp (Primrec.fst.comp Primrec.unpair))
+    · -- show function equality
+      funext w
+      apply propext
+      constructor
+      · intro h
+        have h' : ∀ y < g w, ∃ t, q (pair (pair w y) t) :=
+          fun y hy => (key w y).mp (h y hy)
+        obtain ⟨s, hs⟩ := bounded_collection.mp h'
+        use s
+        simp_all
+      · rintro ⟨s, hs⟩
+        simp_all only [Nat.pair_unpair]
+        aesop
 
 theorem sigma0.forall_lt (hr : sigma0 n (fun z => r z.unpair.1 z.unpair.2)) :
     sigma0 n (fun x => ∀ y < x, r x y) :=
