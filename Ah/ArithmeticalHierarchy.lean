@@ -221,7 +221,7 @@ theorem Primrec.pair_zero : Primrec (fun x : ℕ ↦ Nat.pair x 0) :=
   Primrec₂.natPair.comp Primrec.id (Primrec.const 0)
 
 theorem Primrec.pair_swap : Primrec (fun m : ℕ ↦ pair m.unpair.2 m.unpair.1) :=
-  Primrec.pair (Primrec.snd.comp Primrec.unpair) (Primrec.fst.comp Primrec.unpair)
+  Primrec₂.natPair.comp (Primrec.snd.comp Primrec.unpair) (Primrec.fst.comp Primrec.unpair)
 
 theorem Primrec.pair_unpair_repack :
     Primrec (fun m : ℕ ↦ pair m.unpair.1 (pair m.unpair.2 0)) :=
@@ -320,7 +320,7 @@ theorem sigma0.iff_not_pi0 : sigma0 n p ↔ pi0 n (fun x ↦ ¬(p x)) := by
     have := neg_aux.2 _ h
     simp_all
 
-/-! Closure under and/or -/
+/-! Closure under conjunction and disjunction -/
 
 private lemma bool_aux :
     (∀ p q : ℕ → Prop, sigma0 n p → sigma0 n q → sigma0 n (fun x ↦ p x ∧ q x)) ∧
@@ -338,12 +338,12 @@ private lemma bool_aux :
     · exact PrimrecPred.and hp hq
     · exact PrimrecPred.or hp hq
   | succ n ih =>
-    obtain ⟨ihSigmaAnd, ihSigmaOr, ihPiAnd, ihPiOr⟩ := ih
+    obtain ⟨ih_sigma_and, ih_sigma_or, ih_pi_and, ih_pi_or⟩ := ih
     -- g₁ ⟨x,⟨y₁,y₂⟩⟩ = ⟨x,y₁⟩
     have g₁ : Primrec (fun m : ℕ ↦ pair m.unpair.1 m.unpair.2.unpair.1) :=
       Primrec₂.natPair.comp (Primrec.fst.comp Primrec.unpair)
         (Primrec.fst.comp (Primrec.unpair.comp (Primrec.snd.comp Primrec.unpair)))
-    -- g₁ ⟨x,⟨y₁,y₂⟩⟩ = ⟨x,y₂⟩
+    -- g₂ ⟨x,⟨y₁,y₂⟩⟩ = ⟨x,y₂⟩
     have g₂ : Primrec (fun m : ℕ ↦ pair m.unpair.1 m.unpair.2.unpair.2) :=
       Primrec₂.natPair.comp (Primrec.fst.comp Primrec.unpair)
         (Primrec.snd.comp (Primrec.unpair.comp (Primrec.snd.comp Primrec.unpair)))
@@ -352,7 +352,7 @@ private lemma bool_aux :
       rintro p q ⟨q₁, hq₁, rfl⟩ ⟨q₂, hq₂, rfl⟩
       refine ⟨fun m ↦ q₁ (pair m.unpair.1 m.unpair.2.unpair.1) ∧
         q₂ (pair m.unpair.1 m.unpair.2.unpair.2), ?_, ?_⟩
-      · exact ihPiAnd _ _ (pi0.comp_primrec hq₁ g₁) (pi0.comp_primrec hq₂ g₂)
+      · exact ih_pi_and _ _ (pi0.comp_primrec hq₁ g₁) (pi0.comp_primrec hq₂ g₂)
       · funext x
         apply propext
         constructor
@@ -364,19 +364,19 @@ private lemma bool_aux :
           exact ⟨⟨y.unpair.1, hy.1⟩, ⟨y.unpair.2, hy.2⟩⟩
     · -- sigma0 n disjunction
       rintro p q ⟨q₁, hq₁, rfl⟩ ⟨q₂, hq₂, rfl⟩
-      refine ⟨fun m ↦ q₁ m ∨ q₂ m, ihPiOr _ _ hq₁ hq₂, ?_⟩
+      refine ⟨fun m ↦ q₁ m ∨ q₂ m, ih_pi_or _ _ hq₁ hq₂, ?_⟩
       funext x
       simp [exists_or]
     · -- pi0 n conjunction
       rintro p q ⟨q₁, hq₁, rfl⟩ ⟨q₂, hq₂, rfl⟩
-      refine ⟨fun m ↦ q₁ m ∧ q₂ m, ihSigmaAnd _ _ hq₁ hq₂, ?_⟩
+      refine ⟨fun m ↦ q₁ m ∧ q₂ m, ih_sigma_and _ _ hq₁ hq₂, ?_⟩
       funext x
       simp [forall_and]
     · -- pi0 n disjunction
       rintro p q ⟨q₁, hq₁, rfl⟩ ⟨q₂, hq₂, rfl⟩
       refine ⟨fun m ↦ q₁ (pair m.unpair.1 m.unpair.2.unpair.1) ∨
           q₂ (pair m.unpair.1 m.unpair.2.unpair.2), ?_, ?_⟩
-      · exact ihSigmaOr _ _ (sigma0.comp_primrec hq₁ g₁) (sigma0.comp_primrec hq₂ g₂)
+      · exact ih_sigma_or _ _ (sigma0.comp_primrec hq₁ g₁) (sigma0.comp_primrec hq₂ g₂)
       · funext x
         apply propext
         constructor
@@ -529,9 +529,9 @@ theorem pi0.exists_lt_primrec (hs : pi0 n (fun m ↦ s m.unpair.1 m.unpair.2))
     constructor <;> simp_all
   simp_all [sigma0.iff_not_pi0]
 
-theorem pi0.exists_lt (hR : pi0 n (fun m ↦ r m.unpair.1 m.unpair.2)) :
+theorem pi0.exists_lt (hr : pi0 n (fun m ↦ r m.unpair.1 m.unpair.2)) :
     pi0 n (fun x ↦ ∃ y < x, r x y) :=
-  pi0.exists_lt_primrec hR Primrec.id
+  pi0.exists_lt_primrec hr Primrec.id
 
 /-! delta0 is closed under bounded quantifiers -/
 
