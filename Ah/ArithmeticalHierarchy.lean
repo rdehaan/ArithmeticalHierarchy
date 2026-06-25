@@ -339,11 +339,11 @@ private lemma bool_aux :
     · exact PrimrecPred.or hp hq
   | succ n ih =>
     obtain ⟨ih_sigma_and, ih_sigma_or, ih_pi_and, ih_pi_or⟩ := ih
-    -- g₁ ⟨x,⟨y₁,y₂⟩⟩ = ⟨x,y₁⟩
+    -- g₁ ⟨m,⟨k₁,k₂⟩⟩ = ⟨m,k₁⟩
     have g₁ : Primrec (fun m : ℕ ↦ pair m.unpair.1 m.unpair.2.unpair.1) :=
       Primrec₂.natPair.comp (Primrec.fst.comp Primrec.unpair)
         (Primrec.fst.comp (Primrec.unpair.comp (Primrec.snd.comp Primrec.unpair)))
-    -- g₂ ⟨x,⟨y₁,y₂⟩⟩ = ⟨x,y₂⟩
+    -- g₂ ⟨m,⟨k₁,k₂⟩⟩ = ⟨m,k₂⟩
     have g₂ : Primrec (fun m : ℕ ↦ pair m.unpair.1 m.unpair.2.unpair.2) :=
       Primrec₂.natPair.comp (Primrec.fst.comp Primrec.unpair)
         (Primrec.snd.comp (Primrec.unpair.comp (Primrec.snd.comp Primrec.unpair)))
@@ -356,12 +356,12 @@ private lemma bool_aux :
       · funext m
         apply propext
         constructor
-        · rintro ⟨⟨y₁, h₁⟩, ⟨y₂, h₂⟩⟩
-          refine ⟨pair y₁ y₂, ?_⟩
+        · rintro ⟨⟨k₁, h₁⟩, ⟨k₂, h₂⟩⟩
+          refine ⟨pair k₁ k₂, ?_⟩
           simp_all
-        · rintro ⟨y, hy⟩
+        · rintro ⟨k, hk⟩
           simp_all only [Nat.unpair_pair]
-          exact ⟨⟨y.unpair.1, hy.1⟩, ⟨y.unpair.2, hy.2⟩⟩
+          exact ⟨⟨k.unpair.1, hk.1⟩, ⟨k.unpair.2, hk.2⟩⟩
     · -- sigma0 n disjunction
       rintro p q ⟨q₁, hq₁, rfl⟩ ⟨q₂, hq₂, rfl⟩
       refine ⟨fun m ↦ q₁ m ∨ q₂ m, ih_pi_or _ _ hq₁ hq₂, ?_⟩
