@@ -409,7 +409,7 @@ theorem pi0.forall_lt_primrec (hs : pi0 n (fun m ↦ s m.unpair.1 m.unpair.2))
   | succ n ih =>
     obtain ⟨q, hq, heq⟩ := hs
     -- pointwise description of s
-    have key : ∀ a c : ℕ, s a c ↔ ∀ t, q (pair (pair a c) t) := by
+    have h_key : ∀ a c : ℕ, s a c ↔ ∀ t, q (pair (pair a c) t) := by
       intro a c
       have := congrFun heq (pair a c)
       simp_all
@@ -434,7 +434,7 @@ theorem pi0.forall_lt_primrec (hs : pi0 n (fun m ↦ s m.unpair.1 m.unpair.2))
         · right; simp_all
         · left; exact hv
       · intro h k hk
-        rw [key m k]
+        rw [h_key m k]
         intro t
         have hv := h (pair k t)
         simp_all
@@ -472,7 +472,7 @@ theorem sigma0.forall_lt_primrec (hs : sigma0 n (fun m ↦ s m.unpair.1 m.unpair
   | succ n ih =>
     obtain ⟨q, hq, heq⟩ := hs
     -- pointwise description of s
-    have key : ∀ a c : ℕ, s a c ↔ ∃ t, q (pair (pair a c) t) := by
+    have h_key : ∀ a c : ℕ, s a c ↔ ∃ t, q (pair (pair a c) t) := by
       intro a c
       have := congrFun heq (pair a c)
       simp_all
@@ -498,7 +498,7 @@ theorem sigma0.forall_lt_primrec (hs : sigma0 n (fun m ↦ s m.unpair.1 m.unpair
       constructor
       · intro h
         have h' : ∀ k < g m, ∃ t, q (pair (pair m k) t) :=
-          fun k hk ↦ (key m k).mp (h k hk)
+          fun k hk ↦ (h_key m k).mp (h k hk)
         obtain ⟨s, hs⟩ := bounded_collection.mp h'
         use s
         simp_all
@@ -582,46 +582,6 @@ theorem pi0.forall_succ (h : pi0 (n + 1) q) :
     simp_all
 
 
-/-! ## Closure under computable substitution and many-one reducibility -/
-
-/-! Closure under computable substitution -/
-
-theorem sigma0.comp_computable (hp : sigma0 (n + 1) p) (hf : Computable f) :
-    sigma0 (n + 1) (fun m ↦ p (f m)) := by
-  sorry
-
-theorem pi0.comp_computable (hp : pi0 (n + 1) p) (hf : Computable f) :
-    pi0 (n + 1) (fun m ↦ p (f m)) := by
-  sorry
-
-theorem delta0.comp_computable (hp : delta0 (n + 1) p) (hf : Computable f) :
-    delta0 (n + 1) (fun m ↦ p (f m)) :=
-  ⟨sigma0.comp_computable hp.1 hf, pi0.comp_computable hp.2 hf⟩
-
-/-! Downward closure under many-one reducibility -/
-
-theorem sigma0.of_manyOneReducible (hred : p ≤₀ q) (hq : sigma0 (n + 1) q) : sigma0 (n + 1) p := by
-  obtain ⟨f, hf, hpq⟩ := hred
-  have heq : p = fun m ↦ q (f m) := by
-    funext m
-    apply propext
-    simp_all
-  rw [heq]
-  exact sigma0.comp_computable hq hf
-
-theorem pi0.of_manyOneReducible (hred : p ≤₀ q) (hq : pi0 (n + 1) q) : pi0 (n + 1) p := by
-  obtain ⟨f, hf, hpq⟩ := hred
-  have heq : p = fun m ↦ q (f m) := by
-    funext m
-    apply propext
-    simp_all
-  rw [heq]
-  exact pi0.comp_computable hq hf
-
-theorem delta0.of_manyOneReducible (hred : p ≤₀ q) (hq : delta0 (n + 1) q) : delta0 (n + 1) p :=
-  ⟨sigma0.of_manyOneReducible hred hq.1, pi0.of_manyOneReducible hred hq.2⟩
-
-
 /-! ## Characterization of the first level -/
 
 private lemma sigma0.one_to_re (h : sigma0 1 p) : REPred p := by
@@ -649,6 +609,102 @@ theorem sigma0.of_computable (hn : 1 ≤ n) (h : ComputablePred p) : sigma0 n p 
 theorem pi0.of_computable (hn : 1 ≤ n) (h : ComputablePred p) : pi0 n p := by
   rw [← delta0.one_iff_computable, delta0] at h
   exact pi0.mono_le (n := 1) (m := n) hn h.right
+
+
+/-! ## Characterization of the graph of computable functions -/
+
+/-- The graph of a partial function `f` is the set of all numbers coding pairs `(k,l)`
+such that `f k = l` -/
+def graph_of (f : ℕ →. ℕ) : (ℕ → Prop) := (fun m : ℕ ↦ f m.unpair.1 = Part.some m.unpair.2)
+
+theorem sigma0.graph_of_partrec {f : ℕ →. ℕ} (hf : Nat.Partrec f) : sigma0 1 (graph_of f) := by
+  sorry
+
+theorem partrec_of_sigma01_graph {f : ℕ →. ℕ} (h : sigma0 1 (graph_of f)) : Nat.Partrec f := by
+  sorry
+
+theorem computable_iff_delta01_graph {f : ℕ → ℕ} : Computable f ↔ delta0 1 (graph_of f) := by
+  sorry
+
+
+/-! ## Closure under computable substitution and many-one reducibility -/
+
+/-! Closure under computable substitution -/
+
+theorem sigma0.comp_computable (hp : sigma0 (n + 1) p) (hf : Computable f) :
+    sigma0 (n + 1) (fun m ↦ p (f m)) := by
+  obtain ⟨ef, hef⟩ := Nat.Partrec.Code.exists_code.mp (Partrec.nat_iff.mp hf.partrec)
+  -- the graph is `sigma0 1`
+  have h_graph : sigma0 1 (graph_of f) := by
+    refine ⟨fun m ↦ evaln m.unpair.2 ef m.unpair.1.unpair.1 = some m.unpair.1.unpair.2, ?_, ?_⟩
+    · -- the function is primitive recursive
+      have h_evaln : Primrec (fun m : ℕ ↦ evaln m.unpair.2 ef m.unpair.1.unpair.1) :=
+        Nat.Partrec.Code.primrec_evaln.comp
+          (((Primrec.snd.comp Primrec.unpair).pair (Primrec.const ef)).pair
+            (Primrec.fst.comp (Primrec.unpair.comp (Primrec.fst.comp Primrec.unpair))))
+      exact PrimrecRel.comp Primrec.eq h_evaln
+        (Primrec.option_some.comp
+          (Primrec.snd.comp (Primrec.unpair.comp (Primrec.fst.comp Primrec.unpair))))
+    · -- function equality
+      funext m
+      apply propext
+      simp only [Nat.unpair_pair, graph_of]
+      constructor
+      · intro
+        have h_mem : m.unpair.2 ∈ eval ef m.unpair.1 := by simp_all
+        obtain ⟨k, hk⟩ := evaln_complete.mp h_mem
+        exact ⟨k, Option.mem_def.mp hk⟩
+      · rintro ⟨k, hk⟩
+        have := evaln_sound (Option.mem_def.mpr hk)
+        simp_all
+  -- `fun m => ((graph_of f) m) ∧ p m.unpair.2` is `sigma0 (n + 1)`
+  have h_conj : sigma0 (n + 1) (fun m : ℕ => (graph_of f) m ∧ p m.unpair.2) := by
+    have h_left : sigma0 (n + 1) (graph_of f) :=
+      sigma0.mono_le (Nat.succ_le_succ (Nat.zero_le n)) h_graph
+    have h_right : sigma0 (n + 1) (fun m : ℕ ↦ p m.unpair.2) :=
+      sigma0.comp_primrec hp (Primrec.snd.comp Primrec.unpair)
+    exact sigma0.and h_left h_right
+  -- `p (f x)` is equivalent to the existentially quantified conjunction in `h_conj`
+  have h_key : (fun m => p (f m)) = (fun m => ∃ k, ((graph_of f) (Nat.pair m k))
+      ∧ p (Nat.pair m k).unpair.2) := by
+    funext m
+    apply propext
+    simp only [graph_of, Nat.unpair_pair]
+    constructor <;> simp_all
+  rw [h_key]
+  exact sigma0.exists_succ h_conj
+
+theorem pi0.comp_computable (hp : pi0 (n + 1) p) (hf : Computable f) :
+    pi0 (n + 1) (fun m ↦ p (f m)) := by
+  rw [pi0.iff_not_sigma0]
+  exact sigma0.comp_computable (pi0.iff_not_sigma0.mp hp) hf
+
+theorem delta0.comp_computable (hp : delta0 (n + 1) p) (hf : Computable f) :
+    delta0 (n + 1) (fun m ↦ p (f m)) :=
+  ⟨sigma0.comp_computable hp.1 hf, pi0.comp_computable hp.2 hf⟩
+
+/-! Downward closure under many-one reducibility -/
+
+theorem sigma0.of_manyOneReducible (hred : p ≤₀ q) (hq : sigma0 (n + 1) q) : sigma0 (n + 1) p := by
+  obtain ⟨f, hf, hpq⟩ := hred
+  have heq : p = fun m ↦ q (f m) := by
+    funext m
+    apply propext
+    simp_all
+  rw [heq]
+  exact sigma0.comp_computable hq hf
+
+theorem pi0.of_manyOneReducible (hred : p ≤₀ q) (hq : pi0 (n + 1) q) : pi0 (n + 1) p := by
+  obtain ⟨f, hf, hpq⟩ := hred
+  have heq : p = fun m ↦ q (f m) := by
+    funext m
+    apply propext
+    simp_all
+  rw [heq]
+  exact pi0.comp_computable hq hf
+
+theorem delta0.of_manyOneReducible (hred : p ≤₀ q) (hq : delta0 (n + 1) q) : delta0 (n + 1) p :=
+  ⟨sigma0.of_manyOneReducible hred hq.1, pi0.of_manyOneReducible hred hq.2⟩
 
 
 /-! ## Completeness -/
