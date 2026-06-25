@@ -184,12 +184,12 @@ theorem pi0.comp_primrec (hp : pi0 n p) (hf : Primrec f) : pi0 n (fun m ↦ p (f
 
 theorem sigma0.of_pi0_succ (h : pi0 n p) : sigma0 (n + 1) p := by
   refine ⟨fun m ↦ p m.unpair.1, pi0.comp_primrec h (Primrec.fst.comp Primrec.unpair), ?_⟩
-  funext x
+  funext m
   simp
 
 theorem pi0.of_sigma0_succ (h : sigma0 n p) : pi0 (n + 1) p := by
   refine ⟨fun m ↦ p m.unpair.1, sigma0.comp_primrec h (Primrec.fst.comp Primrec.unpair), ?_⟩
-  funext x
+  funext m
   simp
 
 /-! Quantifier shifting -/
@@ -210,7 +210,7 @@ theorem sigma0.of_exists_pi01 (hp : pi0 1 (fun m ↦ r m.unpair.1 m.unpair.2)) :
 /-! Primitive recursive helpers -/
 
 theorem PrimrecPred.lt_pair : PrimrecPred (fun m : ℕ ↦ m.unpair.2 < m.unpair.1) := by
-  have h_le : PrimrecRel (fun m y : ℕ ↦ y < m) :=
+  have h_le : PrimrecRel (fun m k : ℕ ↦ k < m) :=
     Primrec.nat_lt.comp (Primrec.snd) (Primrec.fst)
   exact h_le.comp (Primrec.fst.comp Primrec.unpair) (Primrec.snd.comp Primrec.unpair)
 
@@ -258,29 +258,29 @@ private lemma PrimrecPred.forall_lt_pair (hs : PrimrecPred (fun m : ℕ ↦ s m.
 /-! Finite-sequence coding (needed for sigma0.forall_lt_primrec) -/
 
 /-- Finite-sequence decoder:
-gives the `y`-th entry of the list coded by `s` (with default `0`) -/
-private def seqDecode (s y : ℕ) : ℕ :=
-  ((Encodable.decode (α := List ℕ) s).getD []).getD y 0
+gives the `k`-th entry of the list coded by `seq` (with default `0`) -/
+private def seqDecode (seq k : ℕ) : ℕ :=
+  ((Encodable.decode (α := List ℕ) seq).getD []).getD k 0
 
 private lemma primrec₂_seqDecode : Primrec₂ seqDecode :=
   (Primrec.list_getD 0).comp ( Primrec.option_getD.comp
     ( Primrec.decode.comp ( Primrec.fst ) ) ( Primrec.const [] ) ) ( Primrec.snd )
 
-private lemma exists_seqDecode (x : ℕ) (w : ℕ → ℕ) :
-    ∃ s : ℕ, ∀ k < x, seqDecode s k = w k := by
+private lemma exists_seqDecode (m : ℕ) (w : ℕ → ℕ) :
+    ∃ seq : ℕ, ∀ k < m, seqDecode seq k = w k := by
   unfold seqDecode
-  use Encodable.encode (List.map w (List.range x))
+  use Encodable.encode (List.map w (List.range m))
   simp_all
 
 private lemma bounded_collection :
-    (∀ m < n, ∃ k, r m k) ↔ ∃ s : ℕ, ∀ m < n, r m (seqDecode s m) := by
+    (∀ m < n, ∃ k, r m k) ↔ ∃ seq : ℕ, ∀ m < n, r m (seqDecode seq m) := by
   constructor
   · intro h
-    obtain ⟨s, hs⟩ := exists_seqDecode n (fun m ↦ if hm : m < n then (h m hm).choose else 0)
-    refine ⟨s, fun m hm ↦ ?_⟩
+    obtain ⟨seq, hseq⟩ := exists_seqDecode n (fun m ↦ if hm : m < n then (h m hm).choose else 0)
+    refine ⟨seq, fun m hm ↦ ?_⟩
     simp_all [(h m hm).choose_spec]
-  · intro ⟨s, hs⟩ m hm
-    exact ⟨_, hs m hm⟩
+  · intro ⟨seq, hseq⟩ m hm
+    exact ⟨_, hseq m hm⟩
 
 
 /-! ## Behavior under Boolean operators -/
@@ -297,11 +297,11 @@ private lemma neg_aux :
     refine ⟨fun p hp ↦ ?_, fun p hp ↦ ?_⟩
     · obtain ⟨q, hq, rfl⟩ := hp
       refine ⟨fun m ↦ ¬(q m), ih.2 q hq, ?_⟩
-      funext x
+      funext m
       simp
     · obtain ⟨q, hq, rfl⟩ := hp
       refine ⟨fun m ↦ ¬(q m), ih.1 q hq, ?_⟩
-      funext x
+      funext m
       simp
 
 theorem pi0.iff_not_sigma0 : pi0 n p ↔ sigma0 n (fun m ↦ ¬(p m)) := by
@@ -353,7 +353,7 @@ private lemma bool_aux :
       refine ⟨fun m ↦ q₁ (pair m.unpair.1 m.unpair.2.unpair.1) ∧
         q₂ (pair m.unpair.1 m.unpair.2.unpair.2), ?_, ?_⟩
       · exact ih_pi_and _ _ (pi0.comp_primrec hq₁ g₁) (pi0.comp_primrec hq₂ g₂)
-      · funext x
+      · funext m
         apply propext
         constructor
         · rintro ⟨⟨y₁, h₁⟩, ⟨y₂, h₂⟩⟩
@@ -365,19 +365,19 @@ private lemma bool_aux :
     · -- sigma0 n disjunction
       rintro p q ⟨q₁, hq₁, rfl⟩ ⟨q₂, hq₂, rfl⟩
       refine ⟨fun m ↦ q₁ m ∨ q₂ m, ih_pi_or _ _ hq₁ hq₂, ?_⟩
-      funext x
+      funext m
       simp [exists_or]
     · -- pi0 n conjunction
       rintro p q ⟨q₁, hq₁, rfl⟩ ⟨q₂, hq₂, rfl⟩
       refine ⟨fun m ↦ q₁ m ∧ q₂ m, ih_sigma_and _ _ hq₁ hq₂, ?_⟩
-      funext x
+      funext m
       simp [forall_and]
     · -- pi0 n disjunction
       rintro p q ⟨q₁, hq₁, rfl⟩ ⟨q₂, hq₂, rfl⟩
       refine ⟨fun m ↦ q₁ (pair m.unpair.1 m.unpair.2.unpair.1) ∨
           q₂ (pair m.unpair.1 m.unpair.2.unpair.2), ?_, ?_⟩
       · exact ih_sigma_or _ _ (sigma0.comp_primrec hq₁ g₁) (sigma0.comp_primrec hq₂ g₂)
-      · funext x
+      · funext m
         apply propext
         constructor
         · rintro (_ | _) _ <;> simp_all [Nat.unpair_pair]
@@ -429,18 +429,18 @@ theorem pi0.forall_lt_primrec (hs : pi0 n (fun m ↦ s m.unpair.1 m.unpair.2))
       exact sigma0.or (sigma0.of_primrec (PrimrecPred.not hb))
         (sigma0.comp_primrec hq Primrec.pair_assoc_left)
     · -- show function equality
-      funext w
+      funext m
       apply propext
       constructor
       · intro h v
         simp only [Nat.unpair_pair]
-        by_cases hv : v.unpair.1 < g w
+        by_cases hv : v.unpair.1 < g m
         · right; simp_all
         · left; exact hv
-      · intro h y hy
-        rw [key w y]
+      · intro h k hk
+        rw [key m k]
         intro t
-        have hv := h (pair y t)
+        have hv := h (pair k t)
         simp_all
 
 theorem pi0.forall_lt (hr : pi0 n (fun m ↦ r m.unpair.1 m.unpair.2)) :
@@ -457,7 +457,7 @@ theorem sigma0.exists_lt_primrec (hs : sigma0 n (fun m ↦ s m.unpair.1 m.unpair
   have hforall : pi0 n (fun m ↦ ∀ k < g m, ¬(s m k)) :=
     pi0.forall_lt_primrec (s := fun m k ↦ ¬(s m k)) hs' hg
   have heq : (fun m ↦ ∀ k < g m, ¬(s m k)) = (fun m : ℕ ↦ ¬ ∃ k < g m, s m k) := by
-    funext w
+    funext m
     apply propext
     constructor <;> simp_all
   simp_all [sigma0.iff_not_pi0]
@@ -752,8 +752,8 @@ theorem haltingSet_compl (n : ℕ) (m : ℕ) : haltingSetCompl n m ↔ ¬(haltin
   | 1 => simp
   | n + 2 =>
     simp only [haltingSetCompl_succ_succ, haltingSet_succ_succ, not_exists]
-    refine forall_congr' fun y ↦ ?_
-    have := haltingSet_compl (n + 1) (Nat.pair m.unpair.1 (Nat.pair m.unpair.2 y))
+    refine forall_congr' fun k ↦ ?_
+    have := haltingSet_compl (n + 1) (Nat.pair m.unpair.1 (Nat.pair m.unpair.2 k))
     simp_all
 
 /-! Membership in the halting set depends on the code only through eval -/
