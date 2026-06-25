@@ -100,7 +100,7 @@ theorem delta0.zero_iff : delta0 0 p ↔ PrimrecPred p := by simp [delta0]
 
 /-! Monotonicity properties -/
 
-private theorem mono_aux :
+private lemma mono_aux :
     (∀ p : ℕ → Prop, sigma0 n p → sigma0 (n + 1) p) ∧
     (∀ p : ℕ → Prop, pi0 n p → pi0 (n + 1) p) := by
   induction n with
@@ -150,7 +150,7 @@ theorem pi0.of_primrec (h : PrimrecPred p) : pi0 n p := by
 
 /-! Closure under primitive recursion -/
 
-private theorem comp_aux :
+private lemma comp_aux :
     (∀ (p : ℕ → Prop) (f : ℕ → ℕ), sigma0 n p → Primrec f → sigma0 n (fun x ↦ p (f x))) ∧
     (∀ (p : ℕ → Prop) (f : ℕ → ℕ), pi0 n p → Primrec f → pi0 n (fun x ↦ p (f x))) := by
   induction n with
@@ -244,7 +244,7 @@ theorem Primrec.pair_assoc_right :
       (Primrec.snd.comp (Primrec.unpair.comp (Primrec.fst.comp Primrec.unpair)))
       (Primrec.snd.comp Primrec.unpair))
 
-private theorem PrimrecPred.forall_lt_pair (hs : PrimrecPred (fun m : ℕ ↦ s m.unpair.1 m.unpair.2))
+private lemma PrimrecPred.forall_lt_pair (hs : PrimrecPred (fun m : ℕ ↦ s m.unpair.1 m.unpair.2))
     (hb : Primrec b) : PrimrecPred (fun w : ℕ ↦ ∀ y < b w, s w y) := by
   have hT : PrimrecRel (fun a b' : ℕ ↦ s b' a) := by
     have h := PrimrecPred.comp hs (Primrec₂.natPair.comp Primrec.snd Primrec.fst)
@@ -260,17 +260,17 @@ private theorem PrimrecPred.forall_lt_pair (hs : PrimrecPred (fun m : ℕ ↦ s 
 private def seqDecode (s y : ℕ) : ℕ :=
   ((Encodable.decode (α := List ℕ) s).getD []).getD y 0
 
-private theorem primrec₂_seqDecode : Primrec₂ seqDecode :=
+private lemma primrec₂_seqDecode : Primrec₂ seqDecode :=
   (Primrec.list_getD 0).comp ( Primrec.option_getD.comp
     ( Primrec.decode.comp ( Primrec.fst ) ) ( Primrec.const [] ) ) ( Primrec.snd )
 
-private theorem exists_seqDecode (x : ℕ) (w : ℕ → ℕ) :
+private lemma exists_seqDecode (x : ℕ) (w : ℕ → ℕ) :
     ∃ s : ℕ, ∀ y < x, seqDecode s y = w y := by
   unfold seqDecode
   use Encodable.encode (List.map w (List.range x))
   simp_all
 
-private theorem bounded_collection :
+private lemma bounded_collection :
     (∀ m < n, ∃ k, r m k) ↔ ∃ s : ℕ, ∀ m < n, r m (seqDecode s m) := by
   constructor
   · intro h
@@ -285,7 +285,7 @@ private theorem bounded_collection :
 
 /-! Negation duality -/
 
-private theorem neg_aux :
+private lemma neg_aux :
     (∀ p : ℕ → Prop, sigma0 n p → pi0 n (fun x ↦ ¬(p x))) ∧
     (∀ p : ℕ → Prop, pi0 n p → sigma0 n (fun x ↦ ¬(p x))) := by
   induction n with
@@ -320,7 +320,7 @@ theorem sigma0.iff_not_pi0 : sigma0 n p ↔ pi0 n (fun x ↦ ¬(p x)) := by
 
 /-! Closure under and/or -/
 
-private theorem bool_aux :
+private lemma bool_aux :
     (∀ p q : ℕ → Prop, sigma0 n p → sigma0 n q → sigma0 n (fun x ↦ p x ∧ q x)) ∧
     (∀ p q : ℕ → Prop, sigma0 n p → sigma0 n q → sigma0 n (fun x ↦ p x ∨ q x)) ∧
     (∀ p q : ℕ → Prop, pi0 n p → pi0 n q → pi0 n (fun x ↦ p x ∧ q x)) ∧
@@ -634,10 +634,10 @@ theorem delta0.of_manyOneReducible (hred : p ≤₀ q) (hq : delta0 (n + 1) q) :
 
 /-! ## Characterization of the first level -/
 
-private theorem sigma0.one_to_re (h : sigma0 1 p) : REPred p := by
+private lemma sigma0.one_to_re (h : sigma0 1 p) : REPred p := by
   sorry
 
-private theorem re_to_sigma0_one (h : REPred p) : sigma0 1 p := by
+private lemma re_to_sigma0_one (h : REPred p) : sigma0 1 p := by
   sorry
 
 theorem sigma0.one_iff_re : sigma0 1 p ↔ REPred p :=
@@ -771,7 +771,7 @@ theorem haltingSetCompl_eval_congr (c c' : ℕ) (h : eval (ofNatCode c) = eval (
 
 /-! Inclusion of halting set and its complement in the corresponding levels of the hierarchy -/
 
-private theorem haltingSet_level : sigma0 n (haltingSet n) ∧ pi0 n (haltingSetCompl n) := by
+private lemma haltingSet_level : sigma0 n (haltingSet n) ∧ pi0 n (haltingSetCompl n) := by
   sorry
 
 theorem haltingSet_mem_sigma0 (n : ℕ) : sigma0 n (haltingSet n) := haltingSet_level.1
@@ -842,19 +842,19 @@ theorem haltingSet_section :
 
 /-! ## Completeness for higher levels -/
 
-private theorem haltingSetCompl_pad (hg : Computable g) : ∃ f : ℕ → ℕ, Computable f ∧
+private lemma haltingSetCompl_pad (hg : Computable g) : ∃ f : ℕ → ℕ, Computable f ∧
       ∀ x, (∃ y, haltingSetCompl (n + 1) (g (pair x y))) ↔ haltingSet (n + 2) (f x) := by
   sorry
 
-private theorem haltingSet_sigma_step (ih : pi0Complete (n + 1) (haltingSetCompl (n + 1)))
+private lemma haltingSet_sigma_step (ih : pi0Complete (n + 1) (haltingSetCompl (n + 1)))
     (hq : sigma0 (n + 2) q) : q ≤₀ haltingSet (n + 2) := by
   sorry
 
-private theorem haltingSet_pi_step (ih : sigma0Complete (n + 1) (haltingSet (n + 1)))
+private lemma haltingSet_pi_step (ih : sigma0Complete (n + 1) (haltingSet (n + 1)))
     (hq : pi0 (n + 2) q) : q ≤₀ haltingSetCompl (n + 2) := by
   sorry
 
-private theorem haltingSet_complete :
+private lemma haltingSet_complete :
     sigma0Complete (n + 1) (haltingSet (n + 1)) ∧
     pi0Complete (n + 1) (haltingSetCompl (n + 1)) := by
   sorry
