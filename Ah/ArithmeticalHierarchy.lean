@@ -939,4 +939,94 @@ theorem haltingSet_inseparable : ¬(∃ q : ℕ → Prop, delta0 (n + 1) q ∧
   sorry
 
 
+/-! ## Kleene normal form -/
+
+/-! Auxiliary definitions and basic results -/
+
+/-- Explicit quantifier alternation -/
+def altQ : Bool → ℕ → (ℕ → Prop) → Prop
+  | true,  0,     P => ∃ s, P s
+  | false, 0,     P => ∀ s, ¬ P s
+  | true,  n + 1, P => ∃ k, altQ false n (fun s => P (Nat.pair k s))
+  | false, n + 1, P => ∀ k, altQ true  n (fun s => P (Nat.pair k s))
+
+@[simp]
+theorem altQ_true_zero : altQ true 0 p = ∃ k, p k := rfl
+
+@[simp]
+theorem altQ_false_zero : altQ false 0 p = ∀ k, ¬(p k) := rfl
+
+@[simp]
+theorem altQ_true_succ : altQ true (n + 1) p = ∃ k, altQ false n (fun m ↦ p (Nat.pair k m)) := rfl
+
+@[simp]
+theorem altQ_false_succ : altQ false (n + 1) p = ∀ k, altQ true n (fun m ↦ p (Nat.pair k m)) := rfl
+
+theorem altQ_congr (b : Bool) (h : ∀ m, p m ↔ q m) :
+    altQ b n p ↔ altQ b n q := by
+  induction n generalizing b p q with
+  | zero =>
+    cases b with
+    | true => exact exists_congr fun m => h m
+    | false => exact forall_congr' fun m => not_congr (h m)
+  | succ n ih =>
+    cases b with
+    | true =>
+      simp only [altQ_true_succ]
+      exact exists_congr fun m => ih false fun k => h (Nat.pair m k)
+    | false =>
+      simp only [altQ_false_succ]
+      exact forall_congr' fun m => ih true fun k => h (Nat.pair m k)
+
+/-! Auxiliary functions -/
+
+private def kleene_matrix (m : ℕ) : Option ℕ := evaln (m.unpair.2.unpair.2) (ofNatCode m.unpair.1)
+    (m.unpair.2.unpair.1)
+
+theorem kleene_matrix_primrec : PrimrecPred (fun m ↦ kleene_matrix m ≠ none) := by
+  sorry
+
+private def kleene_repack (m : ℕ) : ℕ := Nat.pair (m.unpair.1) (Nat.pair
+    (Nat.pair m.unpair.2.unpair.1 m.unpair.2.unpair.2.unpair.1) m.unpair.2.unpair.2.unpair.2)
+
+theorem kleene_repack_primrec : Primrec kleene_repack := by
+  sorry
+
+/-! Kleene normal forms for haltingSet and haltingSetCompl -/
+
+private lemma kleene_normal_form : ∃ r, PrimrecPred r ∧
+    (∀ m k, haltingSet (n + 1) (Nat.pair m k) ↔
+      altQ true n (fun l => r (Nat.pair m (Nat.pair k l)))) ∧
+    (∀ m k, haltingSetCompl (n + 1) (Nat.pair m k) ↔
+      altQ false n (fun l => r (Nat.pair m (Nat.pair k l)))) := by
+  sorry
+
+theorem haltingSet_kleene_nf : ∃ r, PrimrecPred r ∧ (∀ m k, haltingSet (n + 1) (Nat.pair m k) ↔
+    altQ true n (fun l => r (Nat.pair m (Nat.pair k l)))) := by
+  obtain ⟨r, hr, hk, _⟩ := kleene_normal_form
+  exact ⟨r, hr, hk⟩
+
+theorem haltingSetCompl_kleene_nf : ∃ r, PrimrecPred r ∧ (∀ m k, haltingSetCompl (n + 1)
+    (Nat.pair m k) ↔ altQ false n (fun l => r (Nat.pair m (Nat.pair k l)))) := by
+  obtain ⟨r, hr, _, hk⟩ := kleene_normal_form
+  exact ⟨r, hr, hk⟩
+
+private lemma kleene_normal_form_unpair : ∃ r, PrimrecPred r ∧
+    (∀ m, haltingSet (n + 1) m ↔
+      altQ true n (fun l => r (Nat.pair m.unpair.1 (Nat.pair m.unpair.2 l)))) ∧
+    (∀ m, haltingSetCompl (n + 1) m ↔
+      altQ false n (fun l => r (Nat.pair m.unpair.1 (Nat.pair m.unpair.2 l)))) := by
+  sorry
+
+theorem haltingSet_kleene_nf_unpair : ∃ r, PrimrecPred r ∧ (∀ m, haltingSet (n + 1) m ↔
+    altQ true n (fun l => r (Nat.pair m.unpair.1 (Nat.pair m.unpair.2 l)))) := by
+  obtain ⟨r, hr, hk, _⟩ := kleene_normal_form_unpair
+  exact ⟨r, hr, hk⟩
+
+theorem haltingSetCompl_kleene_nf_unpair : ∃ r, PrimrecPred r ∧ (∀ m, haltingSetCompl (n + 1) m ↔
+      altQ false n (fun l => r (Nat.pair m.unpair.1 (Nat.pair m.unpair.2 l)))) := by
+  obtain ⟨r, hr, _, hk⟩ := kleene_normal_form_unpair
+  exact ⟨r, hr, hk⟩
+
+
 end Computability
