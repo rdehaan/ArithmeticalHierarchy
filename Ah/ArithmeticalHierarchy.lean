@@ -585,7 +585,16 @@ theorem pi0.forall_succ (h : pi0 (n + 1) q) :
 /-! ## Characterization of the first level -/
 
 private lemma sigma0.one_to_re (h : sigma0 1 p) : REPred p := by
-  sorry
+  obtain ⟨q, hq, rfl⟩ := h
+  have ⟨hd, _⟩ := hq -- to get `DecidablePred q`
+  have h_partrec : Partrec (fun m ↦ Nat.rfind (fun k ↦ Part.some (decide (q (pair m k))))) := by
+    apply_rules [Partrec.rfind]
+    have h_decide : Computable (fun m : ℕ ↦ decide (q m)) := by
+      obtain ⟨f, hf⟩ := hq
+      convert Primrec.to_comp hf
+    exact (h_decide.comp₂ Primrec₂.natPair.to_comp).partrec₂
+  have := Partrec.dom_re h_partrec
+  simp_all
 
 private lemma re_to_sigma0_one (h : REPred p) : sigma0 1 p := by
   sorry
