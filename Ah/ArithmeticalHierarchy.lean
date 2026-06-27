@@ -574,15 +574,20 @@ theorem pi0.forall_succ (h : pi0 (n + 1) q) :
   funext m
   apply propext
   constructor
-  · intro hall k
-    have := hall k.unpair.1 k.unpair.2
-    simp_all
+  · simp_all
   · intro hall k k'
     have := hall (pair k k')
     simp_all
 
 
 /-! ## Characterization of the first level -/
+
+def range (f : ℕ →. ℕ) : ℕ → Prop :=
+  fun n => ∃ m, f m = some n
+
+theorem REPred_iff_exists_partrec_range (p : ℕ → Prop) :
+    REPred p ↔ ∃ f : ℕ →. ℕ, Partrec f ∧ p = range f := by
+  sorry
 
 private lemma sigma0.one_to_re (h : sigma0 1 p) : REPred p := by
   obtain ⟨q, hq, rfl⟩ := h
@@ -597,6 +602,11 @@ private lemma sigma0.one_to_re (h : sigma0 1 p) : REPred p := by
   simp_all
 
 private lemma re_to_sigma0_one (h : REPred p) : sigma0 1 p := by
+  -- the partial function whose domain is p is partial recursive
+  have hpart : Partrec (fun a : ℕ ↦
+      (Part.assert (p a) (fun _ ↦ Part.some ())).map (fun _ ↦ (0 : ℕ))) :=
+    (show Partrec _ from h).map (Computable.const 0)
+  obtain ⟨c, hc⟩ := Nat.Partrec.Code.exists_code.mp (Partrec.nat_iff.mp hpart)
   sorry
 
 theorem sigma0.one_iff_re : sigma0 1 p ↔ REPred p :=
