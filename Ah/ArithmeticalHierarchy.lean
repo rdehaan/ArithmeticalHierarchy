@@ -585,28 +585,167 @@ theorem pi0.forall_succ {q : α × ℕ → Prop} (h : pi0 (n + 1) q) :
 
 /-! ## Characterization of the first level -/
 
-def range (f : ℕ →. ℕ) : ℕ → Prop :=
-  fun n => ∃ m, f m = some n
+/-- `range f` of a `PFun f` is the set consisting of its range. -/
+def range (f : α →. β) : β → Prop := fun x => ∃ y, f y = some x
 
-theorem REPred_iff_exists_partrec_range (p : ℕ → Prop) :
-    REPred p ↔ ∃ f : ℕ →. ℕ, Partrec f ∧ p = range f := by
-  sorry
+private lemma partrec_range_of_computable_range {p : α → Prop} :
+    ((∀ x, ¬ p x) ∨ ∃ (f : ℕ → α), Computable f ∧ p = range (↑f : ℕ →. α)) →
+      ∃ (f : ℕ →. α), Partrec f ∧ p = range f := by
+  intro h
+  cases h with
+  | inl h =>
+    refine ⟨fun _ => Part.none, Partrec.none, ?_⟩
+    funext x
+    apply propext
+    constructor
+    · simp_all
+    · rintro ⟨y, hy⟩
+      simp_all
+  | inr h =>
+    obtain ⟨f, hf, hp⟩ := h
+    exact ⟨↑f, hf.partrec, hp⟩
 
-private lemma sigma0.one_to_re (h : sigma0 1 p) : REPred p := by
-  obtain ⟨q, hq, rfl⟩ := h
-  have ⟨f, hf⟩ := hq
-  have h_decide : Computable₂ (fun (x : α) (k : ℕ) ↦ decide (q (x, k))) :=
-    (Primrec.to_comp hf).of_eq (fun _ ↦ rfl)
-  have h_partrec : Partrec (fun x : α ↦ Nat.rfind (fun k ↦ Part.some (decide (q (x, k))))) :=
-    Partrec.rfind h_decide.partrec₂
-  have := Partrec.dom_re h_partrec
-  simp_all
+private lemma REPred_of_partrec_range {p : α → Prop} :
+    (∃ (f : ℕ →. α), Partrec f ∧ p = range f) → REPred p := by
+  rintro ⟨f, hf, rfl⟩
+  have hf0 : Partrec (fun y => (f y).map (Encodable.encode : α → ℕ)) :=
+    hf.map (Computable.encode.comp Computable.snd).to₂
+  obtain ⟨c, hc⟩ := Nat.Partrec.Code.exists_code.mp (Partrec.nat_iff.mp hf0)
+  -- `g` is the (primitive recursive) searching function that on input `x (n1, n2)`
+  -- outputs `0` if `evaln n2 c n1` outputs `x`, and outputs `none` otherwise
+  set g : α → ℕ → Option ℕ :=
+    fun x n => if Nat.Partrec.Code.evaln n.unpair.2 c n.unpair.1 = some (Encodable.encode x)
+      then some 0 else none with hg_def
+  -- `evaln` is primitive recursive
+  have h_evaln : Primrec (fun q : α × ℕ =>
+      Nat.Partrec.Code.evaln q.2.unpair.2 c q.2.unpair.1) :=
+    Nat.Partrec.Code.primrec_evaln.comp
+      (((Primrec.snd.comp (Primrec.unpair.comp Primrec.snd)).pair (Primrec.const c)).pair
+        (Primrec.fst.comp (Primrec.unpair.comp Primrec.snd)))
+  have hg : Computable₂ g := by
+    have h_prim : Primrec (fun q : α × ℕ => g q.1 q.2) := by
+      apply Primrec.ite ?_ (Primrec.const (some 0)) (Primrec.const none)
+      exact Primrec.eq.comp h_evaln (Primrec.option_some.comp (Primrec.encode.comp Primrec.fst))
+    exact h_prim.to_comp
+  -- the domain of `fun x => rfindOpt (g x)` is exactly the range of `f`.
+  refine (Partrec.rfindOpt hg).dom_re.of_eq (fun x => ?_)
+  simp only [Nat.rfindOpt_dom]
+  constructor
+  · rintro ⟨n, a, ha⟩
+    by_cases hcond :
+        Nat.Partrec.Code.evaln n.unpair.2 c n.unpair.1 = some (Encodable.encode x)
+    · have h_mem : Encodable.encode x ∈ Nat.Partrec.Code.evaln n.unpair.2 c n.unpair.1 :=
+        Option.mem_def.mpr hcond
+      have h_ev := Nat.Partrec.Code.evaln_sound h_mem
+      simp only [congrFun hc n.unpair.1, Part.mem_map_iff] at h_ev
+      obtain ⟨b, hb, hbe⟩ := h_ev
+      have h_bx : b = x := Encodable.encode_injective hbe
+      subst h_bx
+      refine ⟨n.unpair.1, ?_⟩
+      simp only [Part.coe_some]
+      exact Part.eq_some_iff.mpr hb
+    · simp_all
+  · rintro ⟨y, hy⟩
+    have h_xmem : x ∈ f y := by
+      simp only [hy, Part.coe_some]
+      exact Part.mem_some x
+    have h_enc_mem : Encodable.encode x ∈ (f y).map (Encodable.encode : α → ℕ) :=
+      (Part.mem_map_iff Encodable.encode).mpr ⟨x, h_xmem, rfl⟩
+    rw [← congrFun hc y] at h_enc_mem
+    obtain ⟨k, hk⟩ := Nat.Partrec.Code.evaln_complete.mp h_enc_mem
+    refine ⟨Nat.pair y k, 0, ?_⟩
+    simp_all
 
-private lemma re_to_sigma0_one (h : REPred p) : sigma0 1 p := by
-  sorry
+private lemma sigma01_of_REPred {p : α → Prop} : REPred p → sigma0 1 p := by
+  intro hp
+  obtain ⟨c, hc⟩ := Nat.Partrec.Code.exists_code.mp hp
+  refine ⟨fun xk ↦ (evaln xk.2 c (Encodable.encode xk.1)).isSome = true, ?_, ?_⟩
+  · -- the matrix is primitive recursive
+    have h1 : Primrec (fun (xk : α × ℕ) ↦ evaln xk.2 c (Encodable.encode xk.1)) :=
+      Nat.Partrec.Code.primrec_evaln.comp
+        (((Primrec.snd).pair (Primrec.const c)).pair (Primrec.encode.comp Primrec.fst))
+    exact Primrec.eq.comp (Primrec.option_isSome.comp h1) (Primrec.const true)
+  · -- `p x` holds iff the computation of `c` on `encode x` is defined
+    funext x
+    apply propext
+    have hdom : p x ↔ (c.eval (Encodable.encode x)).Dom := by
+      rw [hc]
+      simp only [Encodable.encodek, Part.coe_some, Part.bind_some, Part.map_Dom]
+      constructor
+      · intro h; exact ⟨h, trivial⟩
+      · rintro ⟨h, _⟩; exact h
+    simp only [hdom, Part.dom_iff_mem]
+    constructor
+    · rintro ⟨y, hy⟩
+      simp only [Nat.Partrec.Code.evaln_complete] at hy
+      obtain ⟨k, hk⟩ := hy
+      refine ⟨k, ?_⟩
+      simp_all
+    · rintro ⟨k, hk⟩
+      obtain ⟨y, hy⟩ := Option.isSome_iff_exists.mp hk
+      refine ⟨y, Nat.Partrec.Code.evaln_complete.mpr ⟨k, ?_⟩⟩
+      simp_all
+
+private lemma computable_range_of_sigma01 {p : α → Prop} :
+    sigma0 1 p → (∀ x, ¬ p x) ∨ ∃ (f : ℕ → α), Computable f ∧ p = range (↑f : ℕ →. α) := by
+  rintro ⟨q, ⟨hdec, hqp⟩, hp⟩
+  by_cases hne : ∀ x, ¬ p x
+  · left
+    assumption
+  · right
+    push Not at hne
+    obtain ⟨x0, hx0⟩ := hne
+    -- construct the (computable) function f that on input x,
+    -- outputs x if q (x.1 x.2) holds and outputs x0 otherwise
+    let f0 := (fun x : α × ℕ ↦ if q x then x.1 else x0)
+    let f1 := (fun n : ℕ ↦ Option.map f0 (Encodable.decode (α := α × ℕ) n))
+    set f : ℕ → α := fun n ↦ (f1 n).getD x0 with hf
+    have h_inner : Primrec f0 := by
+      convert Primrec.ite ⟨hdec, hqp⟩ Primrec.fst (Primrec.const x0)
+    have h_f1_prim : Primrec f1 :=
+      Primrec.option_map Primrec.decode (h_inner.comp Primrec.snd)
+    have h_f_prim : Primrec f :=
+      Primrec.option_getD.comp h_f1_prim (Primrec.const x0)
+    refine ⟨f, h_f_prim.to_comp, ?_⟩
+    -- show that p = range ↑f
+    funext x
+    apply propext
+    rw [hp]
+    constructor
+    · rintro ⟨k, hk⟩
+      refine ⟨Encodable.encode (x, k), ?_⟩
+      simp_all [f0, f1, f]
+    · rintro ⟨y, hy⟩
+      rw [PFun.coe_val] at hy
+      replace hy : f y = x := Part.some_inj.mp hy
+      rw [hp] at hx0
+      simp only [hf, f1, f0] at hy
+      cases hd : Encodable.decode (α := α × ℕ) y with
+      | none =>
+        simp_all
+      | some ak =>
+        rw [hd] at hy
+        simp only [Option.map_some, Option.getD_some] at hy
+        by_cases hqak : q ak
+        · rw [if_pos hqak] at hy
+          refine ⟨ak.2, ?_⟩
+          rw [← hy]
+          simpa using hqak
+        · simp_all
+
+theorem REPred_iff_exists_computable_range {p : α → Prop} :
+    REPred p ↔ (∀ x, ¬ p x) ∨ ∃ (f : ℕ → α), Computable f ∧ p = range (↑f : ℕ →. α) :=
+  ⟨fun h => computable_range_of_sigma01 (sigma01_of_REPred h),
+   fun h => REPred_of_partrec_range (partrec_range_of_computable_range h)⟩
+
+theorem REPred_iff_exists_partrec_range {p : α → Prop} :
+    REPred p ↔ ∃ (f : ℕ →. α), Partrec f ∧ p = range f :=
+  ⟨fun h => partrec_range_of_computable_range (computable_range_of_sigma01 (sigma01_of_REPred h)),
+   fun h => REPred_of_partrec_range h⟩
 
 theorem sigma0.one_iff_re : sigma0 1 p ↔ REPred p :=
-  ⟨sigma0.one_to_re, re_to_sigma0_one⟩
+  ⟨fun h => REPred_of_partrec_range (partrec_range_of_computable_range
+    (computable_range_of_sigma01 h)), fun h => sigma01_of_REPred h⟩
 
 theorem pi0.one_iff_co_re : pi0 1 p ↔ REPred (fun x ↦ ¬(p x)) := by
   rw [pi0.iff_not_sigma0, sigma0.one_iff_re]
