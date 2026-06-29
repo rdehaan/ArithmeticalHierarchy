@@ -1077,7 +1077,12 @@ theorem haltingSet_compl (n : ℕ) (m : ℕ) : haltingSetCompl n m ↔ ¬(haltin
 theorem haltingSet_eval_congr_both (c c' : ℕ) (h : eval (ofNatCode c) = eval (ofNatCode c')) :
     ∀ a : ℕ, (haltingSet (n + 1) (Nat.pair c a) ↔ haltingSet (n + 1) (Nat.pair c' a)) ∧
       (haltingSetCompl (n + 1) (Nat.pair c a) ↔ haltingSetCompl (n + 1) (Nat.pair c' a)) := by
-  sorry
+  induction n with
+  | zero =>
+    simp_all
+  | succ n ih =>
+    intro _
+    constructor <;> simp_all
 
 theorem haltingSet_eval_congr (c c' : ℕ) (h : eval (ofNatCode c) = eval (ofNatCode c')) (m : ℕ) :
     haltingSet (n + 1) (Nat.pair c m) ↔ haltingSet (n + 1) (Nat.pair c' m) :=
@@ -1089,12 +1094,50 @@ theorem haltingSetCompl_eval_congr (c c' : ℕ) (h : eval (ofNatCode c) = eval (
 
 /-! Inclusion of halting set and its complement in the corresponding levels of the hierarchy -/
 
-private lemma haltingSet_level : sigma0 n (haltingSet n) ∧ pi0 n (haltingSetCompl n) := by
-  sorry
+private lemma haltingSet_level : ∀ n, sigma0 n (haltingSet n) ∧ pi0 n (haltingSetCompl n)
+  | 0 => by
+    have h_code_primrec : Primrec (fun e : ℕ => ofNatCode e) := by
+      have h := Primrec.ofNat Nat.Partrec.Code
+      rwa [Nat.Partrec.Code.ofNatCode_eq] at h
+    have h_evaln_none : PrimrecPred
+        (fun m : ℕ => evaln 0 (ofNatCode m.unpair.1) m.unpair.2 = none) :=
+      Primrec.eq.comp
+        (Nat.Partrec.Code.primrec_evaln.comp
+          (Primrec.pair (Primrec.pair (Primrec.const 0)
+            (h_code_primrec.comp (Primrec.fst.comp Primrec.unpair)))
+              (Primrec.snd.comp Primrec.unpair)))
+        (Primrec.const none)
+    refine ⟨?_, ?_⟩
+    · rw [haltingSet_zero, sigma0.zero_iff]
+      exact h_evaln_none.not
+    · rw [haltingSetCompl_zero, pi0.zero_iff]
+      exact h_evaln_none
+  | 1 => by
+    have h_code_comp : Computable (fun e : ℕ => ofNatCode e) := by
+      have h := (Primrec.ofNat Nat.Partrec.Code).to_comp
+      simp_all [Nat.Partrec.Code.ofNatCode_eq]
+    have h_eval_dom_re : REPred (fun z : ℕ => (eval (ofNatCode z.unpair.1) z.unpair.2).Dom) :=
+      (Nat.Partrec.Code.eval_part.comp (h_code_comp.comp (Computable.fst.comp Computable.unpair))
+        (Computable.snd.comp Computable.unpair)).dom_re
+    refine ⟨?_, ?_⟩
+    · rw [haltingSet_one, sigma0.one_iff_re]
+      simp_all
+    · rw [pi0.iff_not_sigma0, sigma0.one_iff_re]
+      simp_all
+  | n + 2 => by
+    have ih := haltingSet_level (n + 1)
+    refine ⟨?_, ?_⟩
+    · rw [sigma0.succ_eq]
+      refine ⟨fun w : ℕ × ℕ => haltingSetCompl (n + 1)
+          (Nat.pair w.1.unpair.1 (Nat.pair w.1.unpair.2 w.2)), ?_, by simp_all⟩
+      exact pi0.comp_primrec ih.2 Primrec.pair_assoc_right
+    · rw [pi0.succ_eq]
+      refine ⟨fun w : ℕ × ℕ => haltingSet (n + 1)
+          (Nat.pair w.1.unpair.1 (Nat.pair w.1.unpair.2 w.2)), ?_, by simp_all⟩
+      exact sigma0.comp_primrec ih.1 Primrec.pair_assoc_right
 
-theorem haltingSet_mem_sigma0 (n : ℕ) : sigma0 n (haltingSet n) := haltingSet_level.1
-
-theorem haltingSetCompl_mem_pi0 (n : ℕ) : pi0 n (haltingSetCompl n) := haltingSet_level.2
+theorem haltingSet_mem_sigma0 (n : ℕ) : sigma0 n (haltingSet n) := (haltingSet_level n).1
+theorem haltingSetCompl_mem_pi0 (n : ℕ) : pi0 n (haltingSetCompl n) := (haltingSet_level n).2
 
 /-! Completeness of the halting set and its complement for the first level -/
 
@@ -1118,7 +1161,16 @@ theorem haltingSet_one_sigma0_complete : sigma0Complete 1 (haltingSet 1) := by
       exact h.fst
 
 theorem haltingSet_one_not_computable : ¬(ComputablePred (haltingSet 1)) := by
-  sorry
+  intro h
+  apply ComputablePred.halting_problem 0
+  have h_red : (fun c : Nat.Partrec.Code => (eval c 0).Dom) ≤₀ haltingSet 1 := by
+    refine ⟨fun c => Nat.pair (Encodable.encode c) 0,
+      (Primrec₂.natPair.comp Primrec.encode (Primrec.const 0)).to_comp, fun c => ?_⟩
+    have : ofNatCode (Encodable.encode c) = c := by
+      rw [← Nat.Partrec.Code.ofNatCode_eq]
+      exact Denumerable.ofNat_encode c
+    simp_all
+  exact ComputablePred.computable_of_manyOneReducible h_red h
 
 theorem haltingSet_one_not_pi0_one : ¬(pi0 1 (haltingSet 1)) := by
   intro h
@@ -1134,13 +1186,16 @@ theorem ManyOneReducible.compl (h : p ≤₀ q) : (fun x ↦ ¬ p x) ≤₀ (fun
 theorem haltingSetCompl_one_pi0_complete : pi0Complete 1 (haltingSetCompl 1) :=
   pi0Complete.mk (haltingSetCompl_mem_pi0 1) (fun q hq ↦ by
     simp_all only [pi0.iff_not_sigma0]
-    obtain ⟨f, hf, hfr⟩ := haltingSet_one_sigma0_complete.2 (fun x ↦ ¬(q x)) hq
+    obtain ⟨f, hf, h_compl_iff⟩ := haltingSet_one_sigma0_complete.2 (fun x ↦ ¬(q x)) hq
     refine ⟨f, hf, fun x ↦ ?_⟩
     rw [haltingSet_compl]
-    sorry)
+    rw [← h_compl_iff x, not_not])
 
 theorem haltingSetCompl_one_not_computable : ¬(ComputablePred (haltingSetCompl 1)) := by
-  sorry
+  intro h
+  apply haltingSet_one_not_computable
+  have : ComputablePred (fun x => ¬ haltingSetCompl 1 x) := h.not
+  simp_all
 
 theorem haltingSetCompl_one_not_sigma0_one : ¬(sigma0 1 (haltingSetCompl 1)) := by
   intro h
@@ -1150,10 +1205,75 @@ theorem haltingSetCompl_one_not_sigma0_one : ¬(sigma0 1 (haltingSetCompl 1)) :=
 
 /-! Section completeness of the halting set -/
 
-theorem haltingSet_section {q : ℕ → Prop} :
-    (sigma0 (n + 1) q → ∃ k : ℕ, ∀ m, q m ↔ haltingSet (n + 1) (Nat.pair k m)) ∧
-    (pi0 (n + 1) q → ∃ k : ℕ, ∀ m, q m ↔ haltingSetCompl (n + 1) (Nat.pair k m)) := by
-  sorry
+/-- Lemma used for the proof of `haltingSet_section_one`
+(and thus indirectly for `haltingSet_section`) -/
+private lemma sigma0_one_nat_section (q : ℕ → Prop) (hq : sigma0 1 q) :
+    ∃ c : ℕ, ∀ x, q x ↔ haltingSet 1 (Nat.pair c x) := by
+  rw [sigma0.one_iff_re] at hq
+  have h_re_code : Partrec (fun x : ℕ =>
+      (Part.assert (q x) fun _ => Part.some ()).map (fun _ => (0 : ℕ))) :=
+    hq.map (Computable.const 0).to₂
+  obtain ⟨d, hd⟩ := Nat.Partrec.Code.exists_code.mp (Partrec.nat_iff.mp h_re_code)
+  have h_code : ofNatCode (Encodable.encode d) = d := by
+    rw [← Nat.Partrec.Code.ofNatCode_eq]
+    exact Denumerable.ofNat_encode d
+  refine ⟨Encodable.encode d, fun x => ?_⟩
+  rw [haltingSet_one]
+  simp_all only [Nat.unpair_pair]
+  constructor
+  · intro h
+    exact ⟨h, trivial⟩
+  · intro h
+    exact h.fst
+
+/-- Lemma used for the proof of `haltingSet_section`, for the base case -/
+private lemma haltingSet_section_one :
+    (sigma0 1 q → ∃ k : ℕ, ∀ m, q m ↔ haltingSet 1 (Nat.pair k (Encodable.encode m))) ∧
+    (pi0 1 q → ∃ k : ℕ, ∀ m, q m ↔ haltingSetCompl 1 (Nat.pair k (Encodable.encode m))) := by
+  rcases isEmpty_or_nonempty α with _ | ⟨⟨d⟩⟩
+  · exact ⟨fun _ ↦ ⟨0, fun m ↦ isEmptyElim m⟩, fun _ ↦ ⟨0, fun m ↦ isEmptyElim m⟩⟩
+  · have hf_comp : Computable (fun m : ℕ ↦ (Encodable.decode m : Option α).getD d) :=
+      (Primrec.option_getD.comp Primrec.decode (Primrec.const d)).to_comp
+    have h_primrec_isSome : PrimrecPred (fun m : ℕ ↦ (Encodable.decode m : Option α).isSome) :=
+      Primrec.eq.comp (Primrec.option_isSome.comp Primrec.decode) (Primrec.const true)
+    constructor
+    · intro hq
+      have hq_sigma : sigma0 1 (fun m : ℕ ↦ q ((Encodable.decode m : Option α).getD d) ∧
+            (Encodable.decode m : Option α).isSome = true) :=
+        sigma0.and (sigma0.comp_computable hq hf_comp) (sigma0.of_primrec h_primrec_isSome)
+      obtain ⟨c, hc⟩ := sigma0_one_nat_section _ hq_sigma
+      refine ⟨c, fun m ↦ ?_⟩
+      rw [← hc (Encodable.encode m)]
+      simp
+    · intro hq
+      have hq_pi : pi0 1 (fun m : ℕ ↦ q ((Encodable.decode m : Option α).getD d) ∧
+          (Encodable.decode m : Option α).isSome = true) :=
+        pi0.and (pi0.comp_computable hq hf_comp) (pi0.of_primrec h_primrec_isSome)
+      obtain ⟨c, hc⟩ := sigma0_one_nat_section
+        (fun m ↦ ¬ (q ((Encodable.decode m : Option α).getD d) ∧
+          (Encodable.decode m : Option α).isSome = true))
+        (pi0.iff_not_sigma0.mp hq_pi)
+      refine ⟨c, fun m ↦ ?_⟩
+      rw [haltingSet_compl 1 (Nat.pair c (Encodable.encode m)), ← hc (Encodable.encode m)]
+      simp
+
+theorem haltingSet_section {α : Type*} [Primcodable α] (q : α → Prop) :
+    (sigma0 (n + 1) q → ∃ k : ℕ, ∀ m, q m ↔ haltingSet (n + 1)
+      (Nat.pair k (Encodable.encode m))) ∧
+    (pi0 (n + 1) q → ∃ k : ℕ, ∀ m, q m ↔ haltingSetCompl (n + 1)
+      (Nat.pair k (Encodable.encode m))) := by
+  induction n generalizing α q with
+  | zero => exact haltingSet_section_one
+  | succ n ih =>
+    constructor
+    · rintro ⟨r, hr, rfl⟩
+      obtain ⟨k, hk⟩ := (ih r).2 hr
+      refine ⟨k, fun m => ?_⟩
+      simp_all
+    · rintro ⟨r, hr, rfl⟩
+      obtain ⟨k, hk⟩ := (ih r).1 hr
+      refine ⟨k, fun m => ?_⟩
+      simp_all
 
 
 /-! ## Completeness for higher levels -/
@@ -1180,7 +1300,6 @@ theorem haltingSet_sigma0_complete : sigma0Complete (n + 1) (haltingSet (n + 1))
 
 theorem haltingSetCompl_pi0_complete : pi0Complete (n + 1) (haltingSetCompl (n + 1)) :=
   haltingSet_complete.2
-
 
 /-! ## Strictness of the hierarchy -/
 
