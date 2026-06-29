@@ -772,13 +772,125 @@ such that `f k = l` -/
 def graph_of (f : ℕ →. ℕ) : (ℕ → Prop) := (fun m : ℕ ↦ f m.unpair.1 = Part.some m.unpair.2)
 
 theorem sigma0.graph_of_partrec {f : ℕ →. ℕ} (hf : Nat.Partrec f) : sigma0 1 (graph_of f) := by
-  sorry
+  -- sigma0 1 coincides with REPred
+  rw [sigma0.one_iff_re]
+  have h_key : graph_of f = fun m ↦ (m.unpair.2 : ℕ) ∈ f m.unpair.1 := by
+    funext m
+    simp [graph_of, Part.eq_some_iff]
+  rw [h_key]
+  -- construct the partial recursive function g that halts on input m
+  -- iff f(m.unpair.1) = m.unpair.2,
+  -- i.e. iff the pair coded by m belongs to the graph of f
+  let g : ℕ →. Unit := fun m ↦ (f m.unpair.1).bind
+        (fun x ↦ if x = m.unpair.2 then Part.some () else Part.none)
+  have hg : Partrec g := by
+    have hf1 : Partrec (fun m : ℕ ↦ f m.unpair.1) :=
+      (Partrec.nat_iff.mpr hf).comp (Computable.fst.comp Computable.unpair)
+    have hf2 : PrimrecPred (fun x : ℕ × ℕ ↦ x.2 = x.1.unpair.2) := by
+      exact Primrec.eq.comp Primrec.snd (Primrec.snd.comp (Primrec.unpair.comp Primrec.fst))
+    have hf3 : Computable (fun x : ℕ × ℕ ↦ decide (x.2 = x.1.unpair.2)) := hf2.decide.to_comp
+    have hbranch : Partrec₂
+        (fun (m1 m2 : ℕ) ↦ if m2 = m1.unpair.2 then Part.some () else Part.none) := by
+      refine Partrec.of_eq (Partrec.cond hf3 (Partrec.const' (Part.some ())) Partrec.none)
+        (fun x ↦ ?_)
+      exact Bool.cond_decide (x.2 = x.1.unpair.2) (Part.some ()) Part.none
+    exact Partrec.bind hf1 hbranch
+  -- the graph of f equals the domain of g
+  have h_dom : (fun m ↦ (m.unpair.2 : ℕ) ∈ f m.unpair.1) = fun m ↦ (g m).Dom := by
+    funext m
+    simp only [Part.bind_dom, eq_iff_iff, g]
+    constructor
+    · rintro ⟨hd, h_val⟩
+      refine ⟨hd, ?_⟩
+      simp_all
+    · rintro ⟨hd, h_dom⟩
+      by_cases h_val : (f m.unpair.1).get hd = m.unpair.2
+      · rw [← h_val]
+        exact Part.get_mem hd
+      · rw [if_neg h_val] at h_dom
+        exact h_dom.elim
+  rw [h_dom]
+  exact hg.dom_re
+
+/-- There is a code of a function that halts exactly on the graph of f,
+if `graph_of f` is `sigma0 1` -/
+private lemma exists_code_of_graph {f : ℕ →. ℕ} (h : sigma0 1 (graph_of f)) :
+    ∃ c : Nat.Partrec.Code, ∀ z, graph_of f z ↔ (Nat.Partrec.Code.eval c z).Dom := by
+  have h_re : REPred (graph_of f) := Computability.sigma0.one_iff_re.mp h
+  -- get a partial function `ℕ →. ℕ`
+  have hf : Partrec (fun z ↦ Part.map (fun _ ↦ (0 : ℕ))
+      (Part.assert (graph_of f z) fun _ ↦ Part.some ())) :=
+    h_re.map (Computable.const (0 : ℕ)).to₂
+  -- the domains are the same
+  have h_fdom : ∀ x, graph_of f x ↔ (Part.map (fun _ ↦ (0 : ℕ))
+      (Part.assert (graph_of f x) fun _ ↦ Part.some ())).Dom :=
+    fun x ↦ ⟨fun hp ↦ ⟨hp, trivial⟩, fun hp ↦ hp.1⟩
+  obtain ⟨c, hc⟩ := Nat.Partrec.Code.exists_code.mp (Partrec.nat_iff.mp hf)
+  refine ⟨c, fun x ↦ ?_⟩
+  simp_all
+
+/-- The search function used in the proof of `partrec_of_sigma01_graph` is partial recursive -/
+private lemma rfindOpt_graph_partrec (c : Nat.Partrec.Code) :
+    Nat.Partrec (fun m1 ↦ Nat.rfindOpt (fun m2 ↦
+      (Nat.Partrec.Code.evaln m2.unpair.2 c (Nat.pair m1 m2.unpair.1)).map
+        (fun _ ↦ m2.unpair.1))) := by
+  rw [← Partrec.nat_iff]
+  apply Partrec.rfindOpt
+  apply Computable.option_map
+  · have hprim : Primrec (fun x : ℕ × ℕ ↦
+        Nat.Partrec.Code.evaln x.2.unpair.2 c (Nat.pair x.1 x.2.unpair.1)) :=
+      Nat.Partrec.Code.primrec_evaln.comp
+        (((Primrec.snd.comp (Primrec.unpair.comp Primrec.snd)).pair (Primrec.const c)).pair
+          (Primrec₂.natPair.comp Primrec.fst (Primrec.fst.comp (Primrec.unpair.comp Primrec.snd))))
+    exact hprim.to_comp
+  · exact Computable.fst.comp (Computable.unpair.comp (Computable.snd.comp Computable.fst))
+
+/-- The search function used in the proof of `partrec_of_sigma01_graph` computes `f` -/
+private lemma rfindOpt_graph_eq {f : ℕ →. ℕ} (c : Nat.Partrec.Code)
+    (hc : ∀ z, graph_of f z ↔ (Nat.Partrec.Code.eval c z).Dom) (m : ℕ) :
+      Nat.rfindOpt (fun k ↦ (Nat.Partrec.Code.evaln k.unpair.2 c (Nat.pair m k.unpair.1)).map
+        (fun _ ↦ k.unpair.1)) = f m := by
+  -- name the search function
+  set g := fun k : ℕ ↦ (Nat.Partrec.Code.evaln k.unpair.2 c (Nat.pair m k.unpair.1)).map
+    (fun _ ↦ k.unpair.1) with hg_def
+  -- forward: any value found by the search lies in `f m`.
+  have h_sound : ∀ l, l ∈ Nat.rfindOpt g → l ∈ f m := by
+    intro l hmem
+    obtain ⟨s, hs⟩ := Nat.rfindOpt_spec hmem
+    obtain ⟨x, heval, hval⟩ := Option.mem_map.mp hs
+    have hgraph : graph_of f (Nat.pair m s.unpair.1) :=
+      (hc _).mpr (Part.dom_iff_mem.mpr ⟨x, Nat.Partrec.Code.evaln_sound heval⟩)
+    rw [graph_of, Nat.unpair_pair, hval] at hgraph
+    exact Part.eq_some_iff.mp hgraph
+  -- backward: if a value lies in `f m`, the search will find it
+  refine Part.ext fun l ↦ ⟨h_sound l, fun hmem ↦ ?_⟩
+  have h_graph : graph_of f (Nat.pair m l) := by
+    simp [graph_of, Part.eq_some_iff.mpr hmem]
+  obtain ⟨x, heval⟩ := Part.dom_iff_mem.mp ((hc _).mp h_graph)
+  obtain ⟨t, hstep⟩ := Nat.Partrec.Code.evaln_complete.mp heval
+  have h_witness : l ∈ g (Nat.pair l t) := by simp_all
+  obtain ⟨l', hl'⟩ := Part.dom_iff_mem.mp (Nat.rfindOpt_dom.mpr ⟨Nat.pair l t, l, h_witness⟩)
+  exact Part.mem_unique (h_sound l' hl') hmem ▸ hl'
 
 theorem partrec_of_sigma01_graph {f : ℕ →. ℕ} (h : sigma0 1 (graph_of f)) : Nat.Partrec f := by
-  sorry
+  obtain ⟨c, hc⟩ := exists_code_of_graph h
+  exact Nat.Partrec.of_eq (rfindOpt_graph_partrec c) (fun m ↦ rfindOpt_graph_eq c hc m)
 
 theorem computable_iff_delta01_graph {f : ℕ → ℕ} : Computable f ↔ delta0 1 (graph_of f) := by
-  sorry
+  constructor
+  · intro hf
+    refine delta0.one_iff_computable.mpr ?_
+    have h1 : Computable (fun m : ℕ ↦ f m.unpair.1) :=
+      hf.comp (Computable.fst.comp Computable.unpair)
+    have h2 : Computable (fun m : ℕ ↦ m.unpair.2) := Computable.snd.comp Computable.unpair
+    have h_eq : Computable₂ (fun a b : ℕ ↦ decide (a = b)) := Primrec.eq.decide.to_comp
+    have h_comp : ComputablePred (fun m : ℕ ↦ f m.unpair.1 = m.unpair.2) :=
+      ⟨inferInstance, h_eq.comp h1 h2⟩
+    refine ComputablePred.of_eq h_comp (fun m ↦ ?_)
+    change (f m.unpair.1 = m.unpair.2) ↔ ((↑f : ℕ →. ℕ) m.unpair.1 = Part.some m.unpair.2)
+    simp_all
+  · intro hd
+    exact Partrec.nat_iff.mpr (partrec_of_sigma01_graph hd.1)
 
 
 /-! ## Closure under computable substitution and many-one reducibility -/
