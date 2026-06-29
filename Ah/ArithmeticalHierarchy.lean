@@ -899,14 +899,49 @@ theorem computable_iff_delta01_graph {f : ℕ → ℕ} : Computable f ↔ delta0
 
 theorem sigma0.comp_computable {f : β → α} (hp : sigma0 (n + 1) p) (hf : Computable f) :
     sigma0 (n + 1) (fun x ↦ p (f x)) := by
-  -- the graph is `sigma0 1`
-  -- `fun x => ((graph_of f) x) ∧ p x.2` is `sigma0 (n + 1)`
-  -- `p (f x)` is equivalent to the existentially quantified conjunction in `h_conj`
-  sorry
+  rcases isEmpty_or_nonempty α with _ | h
+  · -- vacuous case
+    haveI : IsEmpty β := Function.isEmpty f
+    refine ⟨fun _ ↦ True, pi0.of_primrec ⟨inferInstance, Primrec.const true⟩, ?_⟩
+    funext x
+    exact isEmptyElim x
+  · -- pick a default element `d : α`
+    obtain ⟨d⟩ := h
+    classical
+    -- A: the graph relation `decode k = some (f x)`, is computable
+    have ha_comp : Computable (fun y : β × ℕ ↦ decide (Encodable.decode y.2 = some (f y.1))) :=
+      (PrimrecRel.decide Primrec.eq).to_comp.comp
+        (Computable.decode.comp Computable.snd)
+        (Computable.option_some.comp (hf.comp Computable.fst))
+    have ha : ComputablePred (fun y : β × ℕ ↦ Encodable.decode y.2 = some (f y.1)) :=
+      ⟨inferInstance, ha_comp⟩
+    have ha_sigma : sigma0 (n + 1) (fun z : β × ℕ ↦ Encodable.decode z.2 = some (f z.1)) :=
+      sigma0.of_computable (Nat.le_add_left 1 n) ha
+    -- B: `p` applied to the decoded value, is `sigma0 (n + 1)`
+    have hg_prim : Primrec (fun y : β × ℕ ↦ (Encodable.decode y.2 : Option α).getD d) :=
+      Primrec.option_getD.comp (Primrec.decode.comp Primrec.snd) (Primrec.const d)
+    have hb_sigma : sigma0 (n + 1)
+        (fun z : β × ℕ ↦ p ((Encodable.decode z.2 : Option α).getD d)) :=
+      sigma0.comp_primrec hp hg_prim
+    -- A ∧ B is equivalent to `p (f x)`
+    have h_eq : (fun x ↦ p (f x)) = fun x : β ↦ ∃ k : ℕ,
+        Encodable.decode k = some (f x) ∧ p ((Encodable.decode k : Option α).getD d) := by
+      funext x
+      apply propext
+      constructor
+      · intro _
+        refine ⟨Encodable.encode (f x), ?_, ?_⟩ <;> simp_all
+      · rintro ⟨k, hk, h_pk⟩
+        simp_all
+    rw [h_eq]
+    -- A ∧ B is `sigma0 (n + 1)`
+    exact sigma0.exists_succ (sigma0.and ha_sigma hb_sigma)
 
 theorem pi0.comp_computable {f : β → α} (hp : pi0 (n + 1) p) (hf : Computable f) :
-    pi0 (n + 1) (fun x ↦ p (f x)) := by
-  sorry
+    pi0 (n + 1) (fun x ↦ p (f x)) :=
+  have : sigma0 (n + 1) (fun x ↦ ¬ p (f x)) :=
+    (sigma0.comp_computable (p := fun x : α ↦ ¬(p x)) (pi0.iff_not_sigma0.mp hp) hf)
+  pi0.iff_not_sigma0.mpr this
 
 theorem delta0.comp_computable {f : β → α} (hp : delta0 (n + 1) p) (hf : Computable f) :
     delta0 (n + 1) (fun x ↦ p (f x)) :=
