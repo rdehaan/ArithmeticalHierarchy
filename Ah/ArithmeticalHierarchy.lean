@@ -1257,7 +1257,7 @@ private lemma haltingSet_section_one :
       rw [haltingSet_compl 1 (Nat.pair c (Encodable.encode m)), ← hc (Encodable.encode m)]
       simp
 
-theorem haltingSet_section {α : Type*} [Primcodable α] (q : α → Prop) :
+theorem haltingSet_section (q : α → Prop) :
     (sigma0 (n + 1) q → ∃ k : ℕ, ∀ m, q m ↔ haltingSet (n + 1)
       (Nat.pair k (Encodable.encode m))) ∧
     (pi0 (n + 1) q → ∃ k : ℕ, ∀ m, q m ↔ haltingSetCompl (n + 1)
@@ -1278,28 +1278,59 @@ theorem haltingSet_section {α : Type*} [Primcodable α] (q : α → Prop) :
 
 /-! ## Completeness for higher levels -/
 
+/-- Lemma used in the proof of `haltingSet_sigma_step` -/
 private lemma haltingSetCompl_pad (hg : Computable g) : ∃ f : ℕ → ℕ, Computable f ∧
       ∀ m, (∃ k, haltingSetCompl (n + 1) (g (pair m k))) ↔ haltingSet (n + 2) (f m) := by
-  sorry
+  have h_pi : pi0 (n + 1) (fun w ↦ haltingSetCompl (n + 1) (g w)) :=
+    pi0.comp_computable (haltingSetCompl_mem_pi0 (n + 1)) hg
+  have h_sigma : sigma0 (n + 2) (fun m ↦ ∃ k, haltingSetCompl (n + 1) (g (pair m k))) :=
+    ⟨fun w : ℕ × ℕ ↦ haltingSetCompl (n + 1) (g (pair w.1 w.2)),
+     h_pi.comp_primrec (Primrec₂.natPair.comp Primrec.fst Primrec.snd),
+     funext fun x ↦ propext (exists_congr fun k ↦ by simp)⟩
+  -- extract c from section completeness
+  obtain ⟨c, hc⟩ :=
+    (haltingSet_section (fun m ↦ ∃ k, haltingSetCompl (n + 1) (g (pair m k)))).1 h_sigma
+  -- use `pair c m` as reduction function `f`
+  exact ⟨fun m ↦ Nat.pair c m,
+    (Primrec₂.natPair.comp (Primrec.const c) Primrec.id).to_comp, fun k ↦ hc k⟩
 
+/-- Lemma used in the inductive step of the proof of `haltingSet_complete` -/
 private lemma haltingSet_sigma_step (ih : pi0Complete (n + 1) (haltingSetCompl (n + 1)))
-    (hq : sigma0 (n + 2) q) : q ≤₀ haltingSet (n + 2) := by
-  sorry
+    {q : ℕ → Prop} (hq : sigma0 (n + 2) q) : q ≤₀ haltingSet (n + 2) := by
+  obtain ⟨r, hr, rfl⟩ : ∃ r : ℕ × ℕ → Prop, pi0 (n + 1) r ∧ q = fun m ↦ ∃ k, r (m, k) := hq
+  obtain ⟨g, hg_comp, hg⟩ := ih.2 (fun z ↦ r z.unpair) (hr.comp_primrec Primrec.unpair)
+  obtain ⟨f, hf_comp, hf⟩ := haltingSetCompl_pad hg_comp
+  refine ⟨f, hf_comp, fun m ↦ ?_⟩
+  rw [← hf m]
+  refine exists_congr fun k ↦ ?_
+  simpa [Nat.unpair_pair] using hg (Nat.pair m k)
 
+/-- Lemma used in the inductive step of the proof of `haltingSet_complete` -/
 private lemma haltingSet_pi_step (ih : sigma0Complete (n + 1) (haltingSet (n + 1)))
-    (hq : pi0 (n + 2) q) : q ≤₀ haltingSetCompl (n + 2) := by
-  sorry
+    {q : ℕ → Prop} (hq : pi0 (n + 2) q) : q ≤₀ haltingSetCompl (n + 2) := by
+  have ih_compl : pi0Complete (n + 1) (haltingSetCompl (n + 1)) := by
+    refine ⟨haltingSetCompl_mem_pi0 (n + 1), fun p hp ↦ ?_⟩
+    have := ManyOneReducible.compl (ih.2 (fun m ↦ ¬(p m)) (pi0.iff_not_sigma0.mp hp))
+    simp_all [← haltingSet_compl]
+  have hred := ManyOneReducible.compl (haltingSet_sigma_step ih_compl (pi0.iff_not_sigma0.mp hq))
+  simp_all [not_not, haltingSet_compl]
 
 private lemma haltingSet_complete :
     sigma0Complete (n + 1) (haltingSet (n + 1)) ∧
     pi0Complete (n + 1) (haltingSetCompl (n + 1)) := by
-  sorry
+  induction n with
+  | zero => exact ⟨haltingSet_one_sigma0_complete, haltingSetCompl_one_pi0_complete⟩
+  | succ n ih =>
+    obtain ⟨ih_sigma, ih_pi⟩ := ih
+    exact ⟨⟨haltingSet_mem_sigma0 _, fun _ => haltingSet_sigma_step ih_pi⟩,
+      ⟨haltingSetCompl_mem_pi0 _, fun _ => haltingSet_pi_step ih_sigma⟩⟩
 
 theorem haltingSet_sigma0_complete : sigma0Complete (n + 1) (haltingSet (n + 1)) :=
   haltingSet_complete.1
 
 theorem haltingSetCompl_pi0_complete : pi0Complete (n + 1) (haltingSetCompl (n + 1)) :=
   haltingSet_complete.2
+
 
 /-! ## Strictness of the hierarchy -/
 
