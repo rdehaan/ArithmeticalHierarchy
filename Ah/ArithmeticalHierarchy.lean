@@ -202,6 +202,44 @@ theorem sigma0.of_exists_pi01 {r : α → ℕ → Prop} (hp : pi0 1 (fun (x : α
   refine ⟨fun (x : α × ℕ) ↦ r x.1 x.2, ?_, rfl⟩
   exact pi0.comp_primrec hp Primrec.id
 
+/-! The classes are closed under precomposition by a primrec function -/
+
+mutual
+theorem sigma0_precomp {α β : Type} [Primcodable α] [Primcodable β]
+    {p : β → Prop} {f : α → β} (hf : Primrec f) : ∀ n, sigma0 n p → sigma0 n (p ∘ f)
+  | 0,     hp => hp.comp hf
+  | n + 1, hp => by
+      obtain ⟨q, hq, rfl⟩ := hp
+      exact ⟨q ∘ (fun x ↦ (f x.1, x.2)),
+             pi0_precomp (hf.comp Primrec.fst |>.pair Primrec.snd) n hq,
+             funext fun x ↦ rfl⟩
+
+theorem pi0_precomp {α β : Type} [Primcodable α] [Primcodable β]
+    {p : β → Prop} {f : α → β} (hf : Primrec f) : ∀ n, pi0 n p → pi0 n (p ∘ f)
+  | 0,     hp => hp.comp hf
+  | n + 1, hp => by
+      obtain ⟨q, hq, rfl⟩ := hp
+      exact ⟨q ∘ (fun x ↦ (f x.1, x.2)),
+             sigma0_precomp (hf.comp Primrec.fst |>.pair Primrec.snd) n hq,
+             funext fun x ↦ rfl⟩
+end
+
+theorem sigma0_precomp_rightInverse {α β : Type} [Primcodable α] [Primcodable β]
+    {p : α → Prop} {f : β → α} {g : α → β} (hg : Primrec g)
+    (hfg : ∀ a, f (g a) = a) : sigma0 n (p ∘ f) → sigma0 n p := by
+  intro hp
+  have : p = (p ∘ f) ∘ g := funext fun a => by simp [hfg]
+  rw [this]
+  exact sigma0_precomp hg n hp
+
+theorem pi0_precomp_rightInverse {α β : Type} [Primcodable α] [Primcodable β]
+    {p : α → Prop} {f : β → α} {g : α → β} (hg : Primrec g)
+    (hfg : ∀ a, f (g a) = a) : pi0 n (p ∘ f) → pi0 n p := by
+  intro hp
+  have : p = (p ∘ f) ∘ g := funext fun a => by simp [hfg]
+  rw [this]
+  exact pi0_precomp hg n hp
+
 
 /-! ## Helpers -/
 
@@ -1408,27 +1446,62 @@ theorem pi0_subset_pi0_succ : {p : ℕ → Prop | pi0 n p} ⊆ {p | pi0 (n + 1) 
   fun _ hp ↦ pi0.mono_le (Nat.le_succ n) hp
 
 theorem sigma0_proper_subset : {p : ℕ → Prop | sigma0 n p} ⊂ {p | sigma0 (n + 1) p} := by
-  sorry
+  rw [Set.ssubset_iff_of_subset sigma0_subset_sigma0_succ]
+  refine ⟨haltingSet (n + 1), haltingSet_mem_sigma0 (n + 1), ?_⟩
+  intro h
+  exact haltingSet_not_pi0 (pi0.of_sigma0_succ h)
 
 theorem pi0_proper_subset : {p : ℕ → Prop | pi0 n p} ⊂ {p | pi0 (n + 1) p} := by
-  sorry
+  rw [Set.ssubset_iff_of_subset pi0_subset_pi0_succ]
+  refine ⟨haltingSetCompl (n + 1), haltingSetCompl_mem_pi0 (n + 1), ?_⟩
+  intro h
+  exact haltingSetCompl_not_sigma0 (sigma0.of_pi0_succ h)
 
 /-! Level collapse characterizations -/
 
-theorem sigma0_subset_pi0_iff_collapse : (∀ p : ℕ → Prop, sigma0 n p → pi0 n p) ↔
-    (∀ p : ℕ → Prop, sigma0 n p ↔ pi0 n p) := by
-  sorry
+theorem sigma0_subset_pi0_iff_collapse : (∀ p : α → Prop, sigma0 n p → pi0 n p) ↔
+    (∀ p : α → Prop, sigma0 n p ↔ pi0 n p) := by
+  constructor
+  · intro h p
+    refine ⟨h p, ?_⟩
+    intro h_pi
+    have : sigma0 n (fun x => ¬(p x)) := pi0.iff_not_sigma0.mp h_pi
+    have : pi0 n (fun x => ¬(p x)) := h _ this
+    have : sigma0 n (fun x => ¬¬(p x)) := pi0.iff_not_sigma0.mp this
+    have h_eq : (fun x => ¬¬(p x)) = p := funext fun x => propext not_not
+    simp_all
+  · intro h p hp
+    exact (h p).mp hp
 
-theorem pi0_subset_sigma0_iff_collapse : (∀ p : ℕ → Prop, pi0 n p → sigma0 n p) ↔
-    (∀ p : ℕ → Prop, pi0 n p ↔ sigma0 n p) := by
-  sorry
+theorem pi0_subset_sigma0_iff_collapse : (∀ p : α → Prop, pi0 n p → sigma0 n p) ↔
+    (∀ p : α → Prop, sigma0 n p ↔ pi0 n p) := by
+  constructor
+  · intro h p
+    refine ⟨?_, h p⟩
+    intro h_sigma
+    have : pi0 n (fun x => ¬(p x)) := sigma0.iff_not_pi0.mp h_sigma
+    have : sigma0 n (fun x => ¬(p x)) := h _ this
+    have : pi0 n (fun x => ¬¬(p x)) := sigma0.iff_not_pi0.mp this
+    have h_eq : (fun x => ¬¬(p x)) = p := funext fun x => propext not_not
+    simp_all
+  · intro h p hp
+    exact (h p).mpr hp
 
 /-! Inseparability of haltingSet and haltingSetCompl by delta0 sets -/
 
 theorem haltingSet_inseparable : ¬(∃ q : ℕ → Prop, delta0 (n + 1) q ∧
     (∀ m, haltingSet (n + 1) m → q m) ∧
     (∀ m, haltingSetCompl (n + 1) m → ¬(q m))) := by
-  sorry
+  rintro ⟨c, hc_delta0, hq_covers_halt, hq_excludes_compl⟩
+  have : haltingSet (n + 1) = c := by
+    funext x
+    apply propext
+    refine ⟨hq_covers_halt x, ?_⟩
+    intro h_cx
+    by_contra hx_not_halt
+    exact hq_excludes_compl x ((haltingSet_compl (n + 1) x).mpr hx_not_halt) h_cx
+  have h_halt_delta0 : delta0 (n + 1) (haltingSet (n + 1)) := by simp_all
+  exact haltingSet_not_pi0 h_halt_delta0.2
 
 
 /-! ## Kleene normal form -/
@@ -1478,22 +1551,75 @@ private def kleene_matrix (m : ℕ) : Option ℕ := evaln (m.unpair.2.unpair.2) 
     (m.unpair.2.unpair.1)
 
 theorem kleene_matrix_primrec : PrimrecPred (fun m ↦ kleene_matrix m ≠ none) := by
-  sorry
+  have h_prim_code : Primrec (fun e : ℕ => ofNatCode e) := by
+    have h := Primrec.ofNat Nat.Partrec.Code; rwa [Nat.Partrec.Code.ofNatCode_eq] at h
+  have h_prim : Primrec (fun m : ℕ =>
+      (evaln m.unpair.2.unpair.2 (ofNatCode m.unpair.1) m.unpair.2.unpair.1).isSome) :=
+    Primrec.option_isSome.comp
+      (Nat.Partrec.Code.primrec_evaln.comp
+        (Primrec.pair
+          (Primrec.pair
+            (Primrec.snd.comp (Primrec.unpair.comp (Primrec.snd.comp Primrec.unpair)))
+            (h_prim_code.comp (Primrec.fst.comp Primrec.unpair)))
+          (Primrec.fst.comp (Primrec.unpair.comp (Primrec.snd.comp Primrec.unpair)))))
+  refine PrimrecPred.of_eq (p := fun m => (evaln m.unpair.2.unpair.2 (ofNatCode m.unpair.1)
+    m.unpair.2.unpair.1).isSome = true) ?_ ?_
+  · exact Primrec.eq.comp h_prim (Primrec.const true)
+  · intro w
+    simp [Option.isSome_iff_ne_none, kleene_matrix]
 
 private def kleene_repack (m : ℕ) : ℕ := Nat.pair (m.unpair.1) (Nat.pair
     (Nat.pair m.unpair.2.unpair.1 m.unpair.2.unpair.2.unpair.1) m.unpair.2.unpair.2.unpair.2)
 
 theorem kleene_repack_primrec : Primrec kleene_repack := by
-  sorry
+  have hprim_code : Primrec (fun m : ℕ => m.unpair.1) := Primrec.fst.comp Primrec.unpair
+  have hprim_input : Primrec (fun m : ℕ => m.unpair.2.unpair.1) :=
+    Primrec.fst.comp (Primrec.unpair.comp (Primrec.snd.comp Primrec.unpair))
+  have hprim_steps : Primrec (fun m : ℕ => m.unpair.2.unpair.2.unpair.1) :=
+    Primrec.fst.comp
+      (Primrec.unpair.comp
+        (Primrec.snd.comp (Primrec.unpair.comp (Primrec.snd.comp Primrec.unpair))))
+  have hprim_rest : Primrec (fun m : ℕ => m.unpair.2.unpair.2.unpair.2) :=
+    Primrec.snd.comp
+      (Primrec.unpair.comp
+        (Primrec.snd.comp (Primrec.unpair.comp (Primrec.snd.comp Primrec.unpair))))
+  exact Primrec₂.natPair.comp hprim_code
+    (Primrec₂.natPair.comp (Primrec₂.natPair.comp hprim_input hprim_steps) hprim_rest)
 
 /-! Kleene normal forms for haltingSet and haltingSetCompl -/
+
+theorem Code.dom_iff_evaln (c : Nat.Partrec.Code) (m : ℕ) :
+    (eval c m).Dom ↔ ∃ s, evaln s c m ≠ none := by
+  constructor
+  · intro h
+    obtain ⟨k, hk⟩ := Part.dom_iff_mem.mp h
+    rw [evaln_complete] at hk
+    obtain ⟨s, hs⟩ := hk
+    exact ⟨s, Option.ne_none_iff_exists.mpr ⟨k, (Option.mem_def.mp hs).symm⟩⟩
+  · rintro ⟨s, hs⟩
+    obtain ⟨k, hk⟩ := Option.ne_none_iff_exists.mp hs
+    apply Part.dom_iff_mem.mpr
+    exact ⟨k, evaln_sound (Option.mem_def.mpr hk.symm)⟩
 
 private lemma kleene_normal_form : ∃ r, PrimrecPred r ∧
     (∀ m k, haltingSet (n + 1) (Nat.pair m k) ↔
       altQ true n (fun l ↦ r (Nat.pair m (Nat.pair k l)))) ∧
     (∀ m k, haltingSetCompl (n + 1) (Nat.pair m k) ↔
       altQ false n (fun l ↦ r (Nat.pair m (Nat.pair k l)))) := by
-  sorry
+  induction n with
+  | zero =>
+    refine ⟨fun m ↦ evaln m.unpair.2.unpair.2 (ofNatCode m.unpair.1) m.unpair.2.unpair.1 ≠ none,
+      kleene_matrix_primrec, ?_, ?_⟩ <;> intros <;> simp_all [Code.dom_iff_evaln]
+  | succ n ih =>
+    obtain ⟨r, hr, h_halt, h_halt_compl⟩ := ih
+    refine ⟨fun m ↦ r (Nat.pair m.unpair.1
+        (Nat.pair (Nat.pair m.unpair.2.unpair.1 m.unpair.2.unpair.2.unpair.1)
+          m.unpair.2.unpair.2.unpair.2)),
+            hr.comp kleene_repack_primrec, ?_, ?_⟩
+    · intro c m
+      simp_all [haltingSet_succ_succ]
+    · intro c a
+      simp_all [haltingSetCompl_succ_succ]
 
 theorem haltingSet_kleene_nf : ∃ r, PrimrecPred r ∧ (∀ m k, haltingSet (n + 1) (Nat.pair m k) ↔
     altQ true n (fun l ↦ r (Nat.pair m (Nat.pair k l)))) := by
@@ -1510,7 +1636,14 @@ private lemma kleene_normal_form_unpair : ∃ r, PrimrecPred r ∧
       altQ true n (fun l ↦ r (Nat.pair m.unpair.1 (Nat.pair m.unpair.2 l)))) ∧
     (∀ m, haltingSetCompl (n + 1) m ↔
       altQ false n (fun l ↦ r (Nat.pair m.unpair.1 (Nat.pair m.unpair.2 l)))) := by
-  sorry
+  obtain ⟨r, hr, h_halt, h_halt_compl⟩ := kleene_normal_form
+  refine ⟨r, hr, ?_, ?_⟩
+  · intro m
+    have h := h_halt m.unpair.1 m.unpair.2
+    rwa [Nat.pair_unpair] at h
+  · intro m
+    have h := h_halt_compl m.unpair.1 m.unpair.2
+    rwa [Nat.pair_unpair] at h
 
 theorem haltingSet_kleene_nf_unpair : ∃ r, PrimrecPred r ∧ (∀ m, haltingSet (n + 1) m ↔
     altQ true n (fun l ↦ r (Nat.pair m.unpair.1 (Nat.pair m.unpair.2 l)))) := by
