@@ -1781,61 +1781,71 @@ theorem haltingSetCompl_kleene_nf_unpair : ∃ r, PrimrecPred r ∧ (∀ m, halt
 
 /-! ## Rice's theorem -/
 
-/-! Basic definitions -/
+def extensional (p : (α →. β) → Prop) : Prop := ∀ f g : α →. β, (∀ x, f x = g x) → (p f ↔ p g)
 
-def extensional (p : (ℕ →. ℕ) → Prop) : Prop := ∀ f g : ℕ →. ℕ, (∀ x, f x = g x) → (p f ↔ p g)
+def nontrivial (p : (α →. β) → Prop) : Prop :=
+  (∃ f : α →. β, Partrec f ∧ p f) ∧ (∃ g : α →. β, Partrec g ∧ ¬(p g))
 
-def nontrivial (p : (ℕ →. ℕ) → Prop) : Prop :=
-  (∃ f : ℕ →. ℕ, Partrec f ∧ p f) ∧ (∃ g : ℕ →. ℕ, Partrec g ∧ ¬(p g))
+/-- `evalIndex e` is the partial function `α →. β` computed by the program with index `e` -/
+noncomputable def evalIndex (e : ℕ) : α →. β :=
+  fun a ↦ (eval (ofNatCode e) (Encodable.encode a)).bind
+    (fun m ↦ ((Encodable.decode m : Option β) : Part β))
 
-/-- propIndex p e` is the property `p` lifted to program indices -/
-def propIndex (p : (ℕ →. ℕ) → Prop) (e : ℕ) : Prop := p (eval (ofNatCode e))
+/-- `propIndex p e` is the property `p` lifted to program indices. -/
+def propIndex (p : (α →. β) → Prop) (e : ℕ) : Prop := p (evalIndex e)
 
-/-- Any computable partial function `f` can be uniformly encoded.
+/-- Any partial computable function `f : α →. β` can be uniformly encoded.
 Used in the proof of `rice_reduce`. -/
-private lemma rice_smn (f : ℕ →. ℕ) (hf : Partrec f) :
-    ∃ h : ℕ → ℕ, Computable h ∧ ∀ m k : ℕ, eval (ofNatCode (h m)) k
-      = (eval (ofNatCode m.unpair.1) m.unpair.2).bind (fun _ => f k) := by
-  have h_decode : Computable (fun m : ℕ => ofNatCode m) := by
+private lemma rice_smn (f : α →. β) (hf : Partrec f) :
+    ∃ h : ℕ → ℕ, Computable h ∧ ∀ (m : ℕ) (k : α), evalIndex (h m) k
+      = (eval (ofNatCode m.unpair.1) m.unpair.2).bind (fun _ ↦ f k) := by
+  have h_decode : Computable (fun m : ℕ ↦ ofNatCode m) := by
     rw [← Nat.Partrec.Code.ofNatCode_eq]
     exact Computable.ofNat Nat.Partrec.Code
-  let univ : ℕ →. ℕ := fun m => eval (ofNatCode m.unpair.1) m.unpair.2
+  let univ : ℕ →. ℕ := fun m ↦ eval (ofNatCode m.unpair.1) m.unpair.2
   have h_univ : Partrec univ :=
     Nat.Partrec.Code.eval_part.comp
       (h_decode.comp (Computable.fst.comp Computable.unpair))
       (Computable.snd.comp Computable.unpair)
-  have hg : Partrec (fun m : ℕ =>
-      (univ m.unpair.1).bind (fun _ => f m.unpair.2)) := by
+  let fpart : ℕ →. ℕ :=
+    fun m ↦ ((Encodable.decode m : Option α) : Part α).bind (fun a ↦ (f a).map Encodable.encode)
+  have h_fpart : Partrec fpart := Partrec.nat_iff.mpr hf
+  have hg : Partrec (fun m : ℕ ↦
+      (univ m.unpair.1).bind (fun _ ↦ fpart m.unpair.2)) := by
     apply Partrec.bind
     · exact h_univ.comp (Computable.fst.comp Computable.unpair)
-    · exact hf.comp (Computable.snd.comp (Computable.unpair.comp Computable.fst))
+    · exact h_fpart.comp (Computable.snd.comp (Computable.unpair.comp Computable.fst))
   obtain ⟨c, hc⟩ := Nat.Partrec.Code.exists_code.mp (Partrec.nat_iff.mp hg)
-  let h : ℕ → ℕ := fun m => Encodable.encode (Nat.Partrec.Code.curry c m)
+  let h : ℕ → ℕ := fun m ↦ Encodable.encode (Nat.Partrec.Code.curry c m)
   refine ⟨h, ?_, ?_⟩
   · exact Computable.encode.comp
       ((Nat.Partrec.Code.primrec₂_curry.comp (Primrec.const c) Primrec.id).to_comp)
-  · intro m _
-    have : ofNatCode (h m) = Nat.Partrec.Code.curry c m := by
+  · intro m k
+    have h_code : ofNatCode (h m) = Nat.Partrec.Code.curry c m := by
       rw [← Nat.Partrec.Code.ofNatCode_eq]
       exact Denumerable.ofNat_encode _
-    simp_all [univ]
+    have h_round : ((f k).map Encodable.encode).bind
+        (fun m ↦ ((Encodable.decode m : Option β) : Part β)) = f k := by simp_all
+    change (eval (ofNatCode (h m)) (Encodable.encode k)).bind
+        (fun m ↦ ((Encodable.decode m : Option β) : Part β)) = (univ m).bind (fun _ ↦ f k)
+    simp_all [fpart, Part.bind_assoc]
 
 /-- If `p` holds of some computable `f` but not of the everywhere-undefined function,
 then the halting set many-one reduces to `propIndex p`. -/
-private lemma rice_reduce (p : (ℕ →. ℕ) → Prop) (h_ext : extensional p)
-    (f : ℕ →. ℕ) (hf : Partrec f) (hpf : p f) (_ : ¬(p (fun _ ↦ Part.none))) :
+private lemma rice_reduce (p : (α →. β) → Prop) (h_ext : extensional p)
+    (f : α →. β) (hf : Partrec f) (hpf : p f) (_ : ¬(p (fun _ ↦ Part.none))) :
     haltingSet 1 ≤₀ propIndex p := by
   obtain ⟨h, hh, heq⟩ := rice_smn f hf
   refine ⟨h, hh, fun m ↦ ?_⟩
   rw [haltingSet_one]
   by_cases hm : (eval (ofNatCode m.unpair.1) m.unpair.2).Dom
-  · have h_agree : ∀ k, eval (ofNatCode (h m)) k = f k := fun k ↦ by
+  · have h_agree : ∀ k, evalIndex (h m) k = f k := fun k ↦ by
       rw [heq m k, ← Part.some_get hm, Part.bind_some]
     have : propIndex p (h m) ↔ p f := by
       unfold propIndex
       exact h_ext _ _ h_agree
     simp_all
-  · have h_agree : ∀ k, eval (ofNatCode (h m)) k = Part.none := fun k ↦ by
+  · have h_agree : ∀ k, evalIndex (h m) k = (fun _ : α ↦ Part.none) k := fun k ↦ by
       rw [heq m k, Part.eq_none_iff'.mpr hm, Part.bind_none]
     have : propIndex p (h m) ↔ p (fun _ ↦ Part.none) := by
       unfold propIndex
@@ -1843,11 +1853,11 @@ private lemma rice_reduce (p : (ℕ →. ℕ) → Prop) (h_ext : extensional p)
     simp_all
 
 /-- Rice's theorem: no nontrivial extensional property of partial computable functions
-is decidable. -/
-theorem rice (p : (ℕ →. ℕ) → Prop) (h_ext : extensional p) (h_nontriv : nontrivial p) :
+`α →. β` is decidable. -/
+theorem rice (p : (α →. β) → Prop) (h_ext : extensional p) (h_nontriv : nontrivial p) :
     ¬(ComputablePred (propIndex p)) := by
   intro h_comp
-  by_cases hp_bot : p (fun _ : ℕ ↦ Part.none)
+  by_cases hp_bot : p (fun _ : α ↦ Part.none)
   · -- `rice_reduce` applies to the complement
     obtain ⟨f, hf, hpf⟩ := h_nontriv.2
     have h_ext' : extensional (fun f ↦ ¬(p f)) :=
