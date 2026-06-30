@@ -586,7 +586,7 @@ theorem pi0.forall_succ {q : α × ℕ → Prop} (h : pi0 (n + 1) q) :
 /-! ## Characterization of the first level -/
 
 /-- `range f` of a `PFun f` is the set consisting of its range. -/
-def range (f : α →. β) : β → Prop := fun x => ∃ y, f y = some x
+def range (f : α →. β) : β → Prop := fun x ↦ ∃ y, f y = some x
 
 private lemma partrec_range_of_computable_range {p : α → Prop} :
     ((∀ x, ¬ p x) ∨ ∃ (f : ℕ → α), Computable f ∧ p = range (↑f : ℕ →. α)) →
@@ -594,7 +594,7 @@ private lemma partrec_range_of_computable_range {p : α → Prop} :
   intro h
   cases h with
   | inl h =>
-    refine ⟨fun _ => Part.none, Partrec.none, ?_⟩
+    refine ⟨fun _ ↦ Part.none, Partrec.none, ?_⟩
     funext x
     apply propext
     constructor
@@ -608,27 +608,27 @@ private lemma partrec_range_of_computable_range {p : α → Prop} :
 private lemma REPred_of_partrec_range {p : α → Prop} :
     (∃ (f : ℕ →. α), Partrec f ∧ p = range f) → REPred p := by
   rintro ⟨f, hf, rfl⟩
-  have hf0 : Partrec (fun y => (f y).map (Encodable.encode : α → ℕ)) :=
+  have hf0 : Partrec (fun y ↦ (f y).map (Encodable.encode : α → ℕ)) :=
     hf.map (Computable.encode.comp Computable.snd).to₂
   obtain ⟨c, hc⟩ := Nat.Partrec.Code.exists_code.mp (Partrec.nat_iff.mp hf0)
   -- `g` is the (primitive recursive) searching function that on input `x (n1, n2)`
   -- outputs `0` if `evaln n2 c n1` outputs `x`, and outputs `none` otherwise
   set g : α → ℕ → Option ℕ :=
-    fun x n => if Nat.Partrec.Code.evaln n.unpair.2 c n.unpair.1 = some (Encodable.encode x)
+    fun x n ↦ if Nat.Partrec.Code.evaln n.unpair.2 c n.unpair.1 = some (Encodable.encode x)
       then some 0 else none with hg_def
   -- `evaln` is primitive recursive
-  have h_evaln : Primrec (fun q : α × ℕ =>
+  have h_evaln : Primrec (fun q : α × ℕ ↦
       Nat.Partrec.Code.evaln q.2.unpair.2 c q.2.unpair.1) :=
     Nat.Partrec.Code.primrec_evaln.comp
       (((Primrec.snd.comp (Primrec.unpair.comp Primrec.snd)).pair (Primrec.const c)).pair
         (Primrec.fst.comp (Primrec.unpair.comp Primrec.snd)))
   have hg : Computable₂ g := by
-    have h_prim : Primrec (fun q : α × ℕ => g q.1 q.2) := by
+    have h_prim : Primrec (fun q : α × ℕ ↦ g q.1 q.2) := by
       apply Primrec.ite ?_ (Primrec.const (some 0)) (Primrec.const none)
       exact Primrec.eq.comp h_evaln (Primrec.option_some.comp (Primrec.encode.comp Primrec.fst))
     exact h_prim.to_comp
-  -- the domain of `fun x => rfindOpt (g x)` is exactly the range of `f`.
-  refine (Partrec.rfindOpt hg).dom_re.of_eq (fun x => ?_)
+  -- the domain of `fun x ↦ rfindOpt (g x)` is exactly the range of `f`.
+  refine (Partrec.rfindOpt hg).dom_re.of_eq (fun x ↦ ?_)
   simp only [Nat.rfindOpt_dom]
   constructor
   · rintro ⟨n, a, ha⟩
@@ -735,17 +735,17 @@ private lemma computable_range_of_sigma01 {p : α → Prop} :
 
 theorem REPred_iff_exists_computable_range {p : α → Prop} :
     REPred p ↔ (∀ x, ¬ p x) ∨ ∃ (f : ℕ → α), Computable f ∧ p = range (↑f : ℕ →. α) :=
-  ⟨fun h => computable_range_of_sigma01 (sigma01_of_REPred h),
-   fun h => REPred_of_partrec_range (partrec_range_of_computable_range h)⟩
+  ⟨fun h ↦ computable_range_of_sigma01 (sigma01_of_REPred h),
+   fun h ↦ REPred_of_partrec_range (partrec_range_of_computable_range h)⟩
 
 theorem REPred_iff_exists_partrec_range {p : α → Prop} :
     REPred p ↔ ∃ (f : ℕ →. α), Partrec f ∧ p = range f :=
-  ⟨fun h => partrec_range_of_computable_range (computable_range_of_sigma01 (sigma01_of_REPred h)),
-   fun h => REPred_of_partrec_range h⟩
+  ⟨fun h ↦ partrec_range_of_computable_range (computable_range_of_sigma01 (sigma01_of_REPred h)),
+   fun h ↦ REPred_of_partrec_range h⟩
 
 theorem sigma0.one_iff_re : sigma0 1 p ↔ REPred p :=
-  ⟨fun h => REPred_of_partrec_range (partrec_range_of_computable_range
-    (computable_range_of_sigma01 h)), fun h => sigma01_of_REPred h⟩
+  ⟨fun h ↦ REPred_of_partrec_range (partrec_range_of_computable_range
+    (computable_range_of_sigma01 h)), fun h ↦ sigma01_of_REPred h⟩
 
 theorem pi0.one_iff_co_re : pi0 1 p ↔ REPred (fun x ↦ ¬(p x)) := by
   rw [pi0.iff_not_sigma0, sigma0.one_iff_re]
@@ -1096,11 +1096,11 @@ theorem haltingSetCompl_eval_congr (c c' : ℕ) (h : eval (ofNatCode c) = eval (
 
 private lemma haltingSet_level : ∀ n, sigma0 n (haltingSet n) ∧ pi0 n (haltingSetCompl n)
   | 0 => by
-    have h_code_primrec : Primrec (fun e : ℕ => ofNatCode e) := by
+    have h_code_primrec : Primrec (fun e : ℕ ↦ ofNatCode e) := by
       have h := Primrec.ofNat Nat.Partrec.Code
       rwa [Nat.Partrec.Code.ofNatCode_eq] at h
     have h_evaln_none : PrimrecPred
-        (fun m : ℕ => evaln 0 (ofNatCode m.unpair.1) m.unpair.2 = none) :=
+        (fun m : ℕ ↦ evaln 0 (ofNatCode m.unpair.1) m.unpair.2 = none) :=
       Primrec.eq.comp
         (Nat.Partrec.Code.primrec_evaln.comp
           (Primrec.pair (Primrec.pair (Primrec.const 0)
@@ -1113,10 +1113,10 @@ private lemma haltingSet_level : ∀ n, sigma0 n (haltingSet n) ∧ pi0 n (halti
     · rw [haltingSetCompl_zero, pi0.zero_iff]
       exact h_evaln_none
   | 1 => by
-    have h_code_comp : Computable (fun e : ℕ => ofNatCode e) := by
+    have h_code_comp : Computable (fun e : ℕ ↦ ofNatCode e) := by
       have h := (Primrec.ofNat Nat.Partrec.Code).to_comp
       simp_all [Nat.Partrec.Code.ofNatCode_eq]
-    have h_eval_dom_re : REPred (fun z : ℕ => (eval (ofNatCode z.unpair.1) z.unpair.2).Dom) :=
+    have h_eval_dom_re : REPred (fun z : ℕ ↦ (eval (ofNatCode z.unpair.1) z.unpair.2).Dom) :=
       (Nat.Partrec.Code.eval_part.comp (h_code_comp.comp (Computable.fst.comp Computable.unpair))
         (Computable.snd.comp Computable.unpair)).dom_re
     refine ⟨?_, ?_⟩
@@ -1128,11 +1128,11 @@ private lemma haltingSet_level : ∀ n, sigma0 n (haltingSet n) ∧ pi0 n (halti
     have ih := haltingSet_level (n + 1)
     refine ⟨?_, ?_⟩
     · rw [sigma0.succ_eq]
-      refine ⟨fun w : ℕ × ℕ => haltingSetCompl (n + 1)
+      refine ⟨fun w : ℕ × ℕ ↦ haltingSetCompl (n + 1)
           (Nat.pair w.1.unpair.1 (Nat.pair w.1.unpair.2 w.2)), ?_, by simp_all⟩
       exact pi0.comp_primrec ih.2 Primrec.pair_assoc_right
     · rw [pi0.succ_eq]
-      refine ⟨fun w : ℕ × ℕ => haltingSet (n + 1)
+      refine ⟨fun w : ℕ × ℕ ↦ haltingSet (n + 1)
           (Nat.pair w.1.unpair.1 (Nat.pair w.1.unpair.2 w.2)), ?_, by simp_all⟩
       exact sigma0.comp_primrec ih.1 Primrec.pair_assoc_right
 
@@ -1163,9 +1163,9 @@ theorem haltingSet_one_sigma0_complete : sigma0Complete 1 (haltingSet 1) := by
 theorem haltingSet_one_not_computable : ¬(ComputablePred (haltingSet 1)) := by
   intro h
   apply ComputablePred.halting_problem 0
-  have h_red : (fun c : Nat.Partrec.Code => (eval c 0).Dom) ≤₀ haltingSet 1 := by
-    refine ⟨fun c => Nat.pair (Encodable.encode c) 0,
-      (Primrec₂.natPair.comp Primrec.encode (Primrec.const 0)).to_comp, fun c => ?_⟩
+  have h_red : (fun c : Nat.Partrec.Code ↦ (eval c 0).Dom) ≤₀ haltingSet 1 := by
+    refine ⟨fun c ↦ Nat.pair (Encodable.encode c) 0,
+      (Primrec₂.natPair.comp Primrec.encode (Primrec.const 0)).to_comp, fun c ↦ ?_⟩
     have : ofNatCode (Encodable.encode c) = c := by
       rw [← Nat.Partrec.Code.ofNatCode_eq]
       exact Denumerable.ofNat_encode c
@@ -1194,7 +1194,7 @@ theorem haltingSetCompl_one_pi0_complete : pi0Complete 1 (haltingSetCompl 1) :=
 theorem haltingSetCompl_one_not_computable : ¬(ComputablePred (haltingSetCompl 1)) := by
   intro h
   apply haltingSet_one_not_computable
-  have : ComputablePred (fun x => ¬ haltingSetCompl 1 x) := h.not
+  have : ComputablePred (fun x ↦ ¬ haltingSetCompl 1 x) := h.not
   simp_all
 
 theorem haltingSetCompl_one_not_sigma0_one : ¬(sigma0 1 (haltingSetCompl 1)) := by
@@ -1210,14 +1210,14 @@ theorem haltingSetCompl_one_not_sigma0_one : ¬(sigma0 1 (haltingSetCompl 1)) :=
 private lemma sigma0_one_nat_section (q : ℕ → Prop) (hq : sigma0 1 q) :
     ∃ c : ℕ, ∀ x, q x ↔ haltingSet 1 (Nat.pair c x) := by
   rw [sigma0.one_iff_re] at hq
-  have h_re_code : Partrec (fun x : ℕ =>
-      (Part.assert (q x) fun _ => Part.some ()).map (fun _ => (0 : ℕ))) :=
+  have h_re_code : Partrec (fun x : ℕ ↦
+      (Part.assert (q x) fun _ ↦ Part.some ()).map (fun _ ↦ (0 : ℕ))) :=
     hq.map (Computable.const 0).to₂
   obtain ⟨d, hd⟩ := Nat.Partrec.Code.exists_code.mp (Partrec.nat_iff.mp h_re_code)
   have h_code : ofNatCode (Encodable.encode d) = d := by
     rw [← Nat.Partrec.Code.ofNatCode_eq]
     exact Denumerable.ofNat_encode d
-  refine ⟨Encodable.encode d, fun x => ?_⟩
+  refine ⟨Encodable.encode d, fun x ↦ ?_⟩
   rw [haltingSet_one]
   simp_all only [Nat.unpair_pair]
   constructor
@@ -1268,11 +1268,11 @@ theorem haltingSet_section (q : α → Prop) :
     constructor
     · rintro ⟨r, hr, rfl⟩
       obtain ⟨k, hk⟩ := (ih r).2 hr
-      refine ⟨k, fun m => ?_⟩
+      refine ⟨k, fun m ↦ ?_⟩
       simp_all
     · rintro ⟨r, hr, rfl⟩
       obtain ⟨k, hk⟩ := (ih r).1 hr
-      refine ⟨k, fun m => ?_⟩
+      refine ⟨k, fun m ↦ ?_⟩
       simp_all
 
 
@@ -1322,8 +1322,8 @@ private lemma haltingSet_complete :
   | zero => exact ⟨haltingSet_one_sigma0_complete, haltingSetCompl_one_pi0_complete⟩
   | succ n ih =>
     obtain ⟨ih_sigma, ih_pi⟩ := ih
-    exact ⟨⟨haltingSet_mem_sigma0 _, fun _ => haltingSet_sigma_step ih_pi⟩,
-      ⟨haltingSetCompl_mem_pi0 _, fun _ => haltingSet_pi_step ih_sigma⟩⟩
+    exact ⟨⟨haltingSet_mem_sigma0 _, fun _ ↦ haltingSet_sigma_step ih_pi⟩,
+      ⟨haltingSetCompl_mem_pi0 _, fun _ ↦ haltingSet_pi_step ih_sigma⟩⟩
 
 theorem haltingSet_sigma0_complete : sigma0Complete (n + 1) (haltingSet (n + 1)) :=
   haltingSet_complete.1
@@ -1337,39 +1337,67 @@ theorem haltingSetCompl_pi0_complete : pi0Complete (n + 1) (haltingSetCompl (n +
 /-! Basic strictness results -/
 
 theorem haltingSet_succ_not_computable : ¬(ComputablePred (haltingSet (n + 1))) := by
-  sorry
+  intro h
+  apply haltingSet_one_not_computable
+  have h_sigma : sigma0 (n + 1) (haltingSet 1) :=
+    sigma0.mono_le (Nat.le_add_left 1 n) (haltingSet_mem_sigma0 1)
+  exact ComputablePred.computable_of_manyOneReducible
+    (haltingSet_sigma0_complete.2 (haltingSet 1) h_sigma) h
 
 theorem haltingSet_not_pi0 : ¬(pi0 (n + 1) (haltingSet (n + 1))) := by
-  sorry
+  intro h_pi
+  let d := fun m ↦ ¬(haltingSet (n + 1) (Nat.pair m m))
+  have h_pair : Primrec (fun m : ℕ ↦ Nat.pair m m) :=
+    Primrec₂.natPair.comp Primrec.id Primrec.id
+  have h_halt_pair : pi0 (n + 1) (fun m ↦ haltingSet (n + 1) (Nat.pair m m)) :=
+    pi0.comp_primrec h_pi h_pair
+  have h_sigma : sigma0 (n + 1) d := pi0.iff_not_sigma0.mp h_halt_pair
+  obtain ⟨c, hc⟩ := (haltingSet_section d).1 h_sigma
+  exact iff_not_self (hc c).symm
 
 theorem haltingSetCompl_not_sigma0 : ¬(sigma0 (n + 1) (haltingSetCompl (n + 1))) := by
-  sorry
+  intro h
+  refine haltingSet_not_pi0 (n := n) ?_
+  rw [pi0.iff_not_sigma0]
+  convert h using 1
+  ext x
+  exact (haltingSet_compl (n + 1) x).symm
 
-theorem exists_sigma0_not_pi0 : ∃ p : ℕ → Prop, sigma0 (n + 1) p ∧ ¬(pi0 (n + 1) p) := by
-  sorry
+theorem exists_sigma0_not_pi0 : ∃ p : ℕ → Prop, sigma0 (n + 1) p ∧ ¬(pi0 (n + 1) p) :=
+  ⟨haltingSet (n + 1), haltingSet_mem_sigma0 (n + 1), haltingSet_not_pi0⟩
 
-theorem exists_pi0_not_sigma0 : ∃ p : ℕ → Prop, pi0 (n + 1) p ∧ ¬(sigma0 (n + 1) p) := by
-  sorry
+theorem exists_pi0_not_sigma0 : ∃ p : ℕ → Prop, pi0 (n + 1) p ∧ ¬(sigma0 (n + 1) p) :=
+  ⟨haltingSetCompl (n + 1), haltingSetCompl_mem_pi0 (n + 1), haltingSetCompl_not_sigma0⟩
 
 theorem sigma0_strict : (∀ p : α → Prop, sigma0 n p → sigma0 (n + 1) p) ∧
     ¬(∀ p : ℕ → Prop, sigma0 (n + 1) p → sigma0 n p) := by
-  sorry
+  refine ⟨fun p hp ↦ sigma0.mono_le (Nat.le_succ n) hp, ?_⟩
+  intro h
+  have h_sigma : sigma0 n (haltingSet (n + 1)) := h _ (haltingSet_mem_sigma0 (n + 1))
+  exact haltingSet_not_pi0 (pi0.of_sigma0_succ h_sigma)
 
 theorem pi0_strict : (∀ p : α → Prop, pi0 n p → pi0 (n + 1) p) ∧
     ¬(∀ p : ℕ → Prop, pi0 (n + 1) p → pi0 n p) := by
-  sorry
+  refine ⟨fun p hp ↦ pi0.mono_le (Nat.le_succ n) hp, ?_⟩
+  intro h
+  have h_pi : pi0 n (haltingSetCompl (n + 1)) := h _ (haltingSetCompl_mem_pi0 (n + 1))
+  exact haltingSetCompl_not_sigma0 (sigma0.of_pi0_succ h_pi)
 
-theorem delta0_strict_sigma0 : ∃ p : ℕ → Prop, sigma0 (n + 1) p ∧ ¬(delta0 (n + 1) p) := by
-  sorry
+theorem delta0_strict_sigma0 : ∃ p : ℕ → Prop, sigma0 (n + 1) p ∧ ¬(delta0 (n + 1) p) :=
+  ⟨haltingSet (n + 1), haltingSet_mem_sigma0 (n + 1),
+    fun ⟨_, h_pi⟩ ↦ haltingSet_not_pi0 h_pi⟩
 
-theorem delta0_strict_pi0 : ∃ p : ℕ → Prop, pi0 (n + 1) p ∧ ¬(delta0 (n + 1) p) := by
-  sorry
+theorem delta0_strict_pi0 : ∃ p : ℕ → Prop, pi0 (n + 1) p ∧ ¬(delta0 (n + 1) p) :=
+  ⟨haltingSetCompl (n + 1), haltingSetCompl_mem_pi0 (n + 1),
+    fun ⟨h_sigma, _⟩ ↦ haltingSetCompl_not_sigma0 h_sigma⟩
 
-theorem sigma0_strict_delt0 : ∃ p : ℕ → Prop, sigma0 (n + 1) p ∧ ¬(delta0 n p) := by
-  sorry
+theorem sigma0_strict_delta0 : ∃ p : ℕ → Prop, sigma0 (n + 1) p ∧ ¬(delta0 n p) :=
+  ⟨haltingSet (n + 1), haltingSet_mem_sigma0 (n + 1), fun ⟨_, h_pi⟩ ↦
+    haltingSet_not_pi0 (pi0.mono_le (Nat.le_succ n) h_pi)⟩
 
-theorem pi0_strict_delt0 : ∃ p : ℕ → Prop, pi0 (n + 1) p ∧ ¬(delta0 n p) := by
-  sorry
+theorem pi0_strict_delta0 : ∃ p : ℕ → Prop, pi0 (n + 1) p ∧ ¬(delta0 n p) :=
+  ⟨haltingSetCompl (n + 1), haltingSetCompl_mem_pi0 (n + 1), fun ⟨h_sigma, _⟩ ↦
+    haltingSetCompl_not_sigma0 (sigma0.mono_le (Nat.le_succ n) h_sigma)⟩
 
 /-! Strictness in terms of (inclusions for) sets of sets -/
 
@@ -1411,8 +1439,8 @@ theorem haltingSet_inseparable : ¬(∃ q : ℕ → Prop, delta0 (n + 1) q ∧
 def altQ : Bool → ℕ → (ℕ → Prop) → Prop
   | true,  0,     P => ∃ s, P s
   | false, 0,     P => ∀ s, ¬ P s
-  | true,  n + 1, P => ∃ k, altQ false n (fun s => P (Nat.pair k s))
-  | false, n + 1, P => ∀ k, altQ true  n (fun s => P (Nat.pair k s))
+  | true,  n + 1, P => ∃ k, altQ false n (fun s ↦ P (Nat.pair k s))
+  | false, n + 1, P => ∀ k, altQ true  n (fun s ↦ P (Nat.pair k s))
 
 @[simp]
 theorem altQ_true_zero {p : ℕ → Prop} : altQ true 0 p = ∃ k, p k := rfl
@@ -1433,16 +1461,16 @@ theorem altQ_congr {p q : ℕ → Prop} (b : Bool) (h : ∀ m, p m ↔ q m) :
   induction n generalizing b p q with
   | zero =>
     cases b with
-    | true => exact exists_congr fun m => h m
-    | false => exact forall_congr' fun m => not_congr (h m)
+    | true => exact exists_congr fun m ↦ h m
+    | false => exact forall_congr' fun m ↦ not_congr (h m)
   | succ n ih =>
     cases b with
     | true =>
       simp only [altQ_true_succ]
-      exact exists_congr fun m => ih false fun k => h (Nat.pair m k)
+      exact exists_congr fun m ↦ ih false fun k ↦ h (Nat.pair m k)
     | false =>
       simp only [altQ_false_succ]
-      exact forall_congr' fun m => ih true fun k => h (Nat.pair m k)
+      exact forall_congr' fun m ↦ ih true fun k ↦ h (Nat.pair m k)
 
 /-! Auxiliary functions -/
 
@@ -1462,35 +1490,35 @@ theorem kleene_repack_primrec : Primrec kleene_repack := by
 
 private lemma kleene_normal_form : ∃ r, PrimrecPred r ∧
     (∀ m k, haltingSet (n + 1) (Nat.pair m k) ↔
-      altQ true n (fun l => r (Nat.pair m (Nat.pair k l)))) ∧
+      altQ true n (fun l ↦ r (Nat.pair m (Nat.pair k l)))) ∧
     (∀ m k, haltingSetCompl (n + 1) (Nat.pair m k) ↔
-      altQ false n (fun l => r (Nat.pair m (Nat.pair k l)))) := by
+      altQ false n (fun l ↦ r (Nat.pair m (Nat.pair k l)))) := by
   sorry
 
 theorem haltingSet_kleene_nf : ∃ r, PrimrecPred r ∧ (∀ m k, haltingSet (n + 1) (Nat.pair m k) ↔
-    altQ true n (fun l => r (Nat.pair m (Nat.pair k l)))) := by
+    altQ true n (fun l ↦ r (Nat.pair m (Nat.pair k l)))) := by
   obtain ⟨r, hr, hk, _⟩ := kleene_normal_form
   exact ⟨r, hr, hk⟩
 
 theorem haltingSetCompl_kleene_nf : ∃ r, PrimrecPred r ∧ (∀ m k, haltingSetCompl (n + 1)
-    (Nat.pair m k) ↔ altQ false n (fun l => r (Nat.pair m (Nat.pair k l)))) := by
+    (Nat.pair m k) ↔ altQ false n (fun l ↦ r (Nat.pair m (Nat.pair k l)))) := by
   obtain ⟨r, hr, _, hk⟩ := kleene_normal_form
   exact ⟨r, hr, hk⟩
 
 private lemma kleene_normal_form_unpair : ∃ r, PrimrecPred r ∧
     (∀ m, haltingSet (n + 1) m ↔
-      altQ true n (fun l => r (Nat.pair m.unpair.1 (Nat.pair m.unpair.2 l)))) ∧
+      altQ true n (fun l ↦ r (Nat.pair m.unpair.1 (Nat.pair m.unpair.2 l)))) ∧
     (∀ m, haltingSetCompl (n + 1) m ↔
-      altQ false n (fun l => r (Nat.pair m.unpair.1 (Nat.pair m.unpair.2 l)))) := by
+      altQ false n (fun l ↦ r (Nat.pair m.unpair.1 (Nat.pair m.unpair.2 l)))) := by
   sorry
 
 theorem haltingSet_kleene_nf_unpair : ∃ r, PrimrecPred r ∧ (∀ m, haltingSet (n + 1) m ↔
-    altQ true n (fun l => r (Nat.pair m.unpair.1 (Nat.pair m.unpair.2 l)))) := by
+    altQ true n (fun l ↦ r (Nat.pair m.unpair.1 (Nat.pair m.unpair.2 l)))) := by
   obtain ⟨r, hr, hk, _⟩ := kleene_normal_form_unpair
   exact ⟨r, hr, hk⟩
 
 theorem haltingSetCompl_kleene_nf_unpair : ∃ r, PrimrecPred r ∧ (∀ m, haltingSetCompl (n + 1) m ↔
-      altQ false n (fun l => r (Nat.pair m.unpair.1 (Nat.pair m.unpair.2 l)))) := by
+      altQ false n (fun l ↦ r (Nat.pair m.unpair.1 (Nat.pair m.unpair.2 l)))) := by
   obtain ⟨r, hr, _, hk⟩ := kleene_normal_form_unpair
   exact ⟨r, hr, hk⟩
 
