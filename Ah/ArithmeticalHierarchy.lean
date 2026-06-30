@@ -192,6 +192,16 @@ theorem pi0.comp_primrec_rightInverse {f : β → α} {g : α → β} (hg : Prim
   rw [this]
   exact hp.comp_primrec hg
 
+/-! Equality lemmas -/
+
+theorem sigma0.of_eq (h : sigma0 n p) (heq : ∀ x, p x ↔ q x) : sigma0 n q := by
+  have : p = q := funext fun x ↦ propext (heq x)
+  rwa [← this]
+
+theorem pi0.of_eq (h : pi0 n p) (heq : ∀ x, p x ↔ q x) : pi0 n q := by
+  have : p = q := funext fun x ↦ propext (heq x)
+  rwa [← this]
+
 /-! Trivial (crossing) inclusions -/
 
 theorem sigma0.of_pi0_succ (h : pi0 n p) : sigma0 (n + 1) p := by
@@ -1871,6 +1881,41 @@ theorem rice (p : (α →. β) → Prop) (h_ext : extensional p) (h_nontriv : no
     obtain ⟨f, hf, hpf⟩ := h_nontriv.1
     exact haltingSet_one_not_computable
       (ComputablePred.computable_of_manyOneReducible (rice_reduce p h_ext f hf hpf hp_bot) h_comp)
+
+
+/-! ## Examples of complete sets -/
+
+/-! The set of indices of total computable functions is complete for `pi0 2` -/
+
+def totalCodes : ℕ → Prop := fun e => ∀ n, (eval (ofNatCode e) n).Dom
+
+theorem totalCodes_pi02 : pi0 2 totalCodes := by
+  refine pi0.of_eq
+    (pi0.of_forall_sigma01 (r := fun e m ↦ haltingSet 1 (Nat.pair e m))
+      ((haltingSet_mem_sigma0 1).comp_primrec (Primrec₂.natPair.comp Primrec.fst Primrec.snd)))
+    (fun e ↦ ?_)
+  simp [totalCodes]
+
+theorem haltingSetCompl2_reduces_to_totalCodes : haltingSetCompl 2 ≤₀ totalCodes := by
+  -- `k` is the code of a universal program for `haltingSetCompl 2`
+  obtain ⟨k, hk⟩ := (haltingSet_section (haltingSetCompl 2)).2 (haltingSetCompl_mem_pi0 2)
+  -- `ofNatCode (f n)` halts on all inputs iff `n ∈ haltingSetCompl 2`.
+  let f : ℕ → ℕ := fun n ↦ Encodable.encode ((ofNatCode k).curry n)
+  -- show that `f` is computable, and `n ∈ haltingSetCompl 2 ↔ f n ∈ totalCodes`
+  have f_comp : Computable f :=
+    Computable.encode.comp ((Nat.Partrec.Code.primrec₂_curry.comp
+      (Primrec.const (ofNatCode k)) Primrec.id).to_comp)
+  refine ⟨f, f_comp, fun n ↦ ?_⟩
+  simp only [f, totalCodes]
+  rw [hk n]
+  have h_decode : ofNatCode (f n) = (ofNatCode k).curry n := by
+    rw [← Nat.Partrec.Code.ofNatCode_eq]
+    exact Denumerable.ofNat_encode _
+  simp [f, h_decode]
+
+theorem totalCodes_pi02_complete : pi0Complete 2 totalCodes :=
+  haltingSetCompl_pi0_complete.of_manyOneReducible totalCodes_pi02
+    haltingSetCompl2_reduces_to_totalCodes
 
 
 end Computability
