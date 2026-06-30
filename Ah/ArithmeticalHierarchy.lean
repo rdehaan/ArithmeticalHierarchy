@@ -1684,7 +1684,7 @@ def nontrivial (p : (ℕ →. ℕ) → Prop) : Prop :=
 
 def propIndex (p : (ℕ →. ℕ) → Prop) (e : ℕ) : Prop := p (eval (ofNatCode e))
 
-private theorem rice_smn (f : ℕ →. ℕ) (hf : Partrec f) :
+private lemma rice_smn (f : ℕ →. ℕ) (hf : Partrec f) :
     ∃ h : ℕ → ℕ, Computable h ∧ ∀ m k : ℕ, eval (ofNatCode (h m)) k
       = (eval (ofNatCode m.unpair.1) m.unpair.2).bind (fun _ => f k) := by
   have h_decode : Computable (fun m : ℕ => ofNatCode m) := by
