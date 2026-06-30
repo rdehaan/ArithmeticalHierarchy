@@ -1682,8 +1682,11 @@ def extensional (p : (ℕ →. ℕ) → Prop) : Prop := ∀ f g : ℕ →. ℕ, 
 def nontrivial (p : (ℕ →. ℕ) → Prop) : Prop :=
   (∃ f : ℕ →. ℕ, Partrec f ∧ p f) ∧ (∃ g : ℕ →. ℕ, Partrec g ∧ ¬(p g))
 
+/-- propIndex p e` is the property `p` lifted to program indices -/
 def propIndex (p : (ℕ →. ℕ) → Prop) (e : ℕ) : Prop := p (eval (ofNatCode e))
 
+/-- Any computable partial function `f` can be uniformly encoded.
+Used in the proof of `rice_reduce`. -/
 private lemma rice_smn (f : ℕ →. ℕ) (hf : Partrec f) :
     ∃ h : ℕ → ℕ, Computable h ∧ ∀ m k : ℕ, eval (ofNatCode (h m)) k
       = (eval (ofNatCode m.unpair.1) m.unpair.2).bind (fun _ => f k) := by
@@ -1711,6 +1714,8 @@ private lemma rice_smn (f : ℕ →. ℕ) (hf : Partrec f) :
       exact Denumerable.ofNat_encode _
     simp_all [univ]
 
+/-- If `p` holds of some computable `f` but not of the everywhere-undefined function,
+then the halting set many-one reduces to `propIndex p`. -/
 private lemma rice_reduce (p : (ℕ →. ℕ) → Prop) (h_ext : extensional p)
     (f : ℕ →. ℕ) (hf : Partrec f) (hpf : p f) (_ : ¬(p (fun _ ↦ Part.none))) :
     haltingSet 1 ≤₀ propIndex p := by
@@ -1731,11 +1736,14 @@ private lemma rice_reduce (p : (ℕ →. ℕ) → Prop) (h_ext : extensional p)
       exact h_ext _ _ h_agree
     simp_all
 
+/-- Rice's theorem: no nontrivial extensional property of partial computable functions
+is decidable. -/
 theorem rice (p : (ℕ →. ℕ) → Prop) (h_ext : extensional p) (h_nontriv : nontrivial p) :
     ¬(ComputablePred (propIndex p)) := by
   intro h_comp
   by_cases hp_bot : p (fun _ : ℕ ↦ Part.none)
-  · obtain ⟨f, hf, hpf⟩ := h_nontriv.2
+  · -- `rice_reduce` applies to the complement
+    obtain ⟨f, hf, hpf⟩ := h_nontriv.2
     have h_ext' : extensional (fun f ↦ ¬(p f)) :=
       fun f g hfg ↦ not_congr (h_ext f g hfg)
     have h_red := rice_reduce _ h_ext' f hf hpf (by simpa using hp_bot)
@@ -1743,7 +1751,8 @@ theorem rice (p : (ℕ →. ℕ) → Prop) (h_ext : extensional p) (h_nontriv : 
       ComputablePred.computable_of_manyOneReducible h_red
         (h_comp.not.of_eq (fun _ ↦ by simp [propIndex]))
     exact haltingSet_one_not_computable h_halt_comp
-  · obtain ⟨f, hf, hpf⟩ := h_nontriv.1
+  · -- `rice_reduce` applies directly
+    obtain ⟨f, hf, hpf⟩ := h_nontriv.1
     exact haltingSet_one_not_computable
       (ComputablePred.computable_of_manyOneReducible (rice_reduce p h_ext f hf hpf hp_bot) h_comp)
 
