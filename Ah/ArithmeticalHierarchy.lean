@@ -178,6 +178,20 @@ theorem pi0.comp_primrec {f : β → α} (hp : pi0 n p) (hf : Primrec f) :
     pi0 n (fun x ↦ p (f x)) :=
   comp_aux.2 hp hf
 
+theorem sigma0.comp_primrec_rightInverse {f : β → α} {g : α → β} (hg : Primrec g)
+    (hfg : ∀ a, f (g a) = a) : sigma0 n (p ∘ f) → sigma0 n p := by
+  intro hp
+  have : p = (p ∘ f) ∘ g := funext fun a => by simp [hfg]
+  rw [this]
+  exact hp.comp_primrec hg
+
+theorem pi0.comp_primrec_rightInverse {f : β → α} {g : α → β} (hg : Primrec g)
+    (hfg : ∀ a, f (g a) = a) : pi0 n (p ∘ f) → pi0 n p := by
+  intro hp
+  have : p = (p ∘ f) ∘ g := funext fun a => by simp [hfg]
+  rw [this]
+  exact hp.comp_primrec hg
+
 /-! Trivial (crossing) inclusions -/
 
 theorem sigma0.of_pi0_succ (h : pi0 n p) : sigma0 (n + 1) p := by
@@ -201,44 +215,6 @@ theorem sigma0.of_exists_pi01 {r : α → ℕ → Prop} (hp : pi0 1 (fun (x : α
     sigma0 2 (fun x : α ↦ ∃ k, r x k) := by
   refine ⟨fun (x : α × ℕ) ↦ r x.1 x.2, ?_, rfl⟩
   exact pi0.comp_primrec hp Primrec.id
-
-/-! The classes are closed under precomposition by a primrec function -/
-
-mutual
-theorem sigma0_precomp {α β : Type} [Primcodable α] [Primcodable β]
-    {p : β → Prop} {f : α → β} (hf : Primrec f) : ∀ n, sigma0 n p → sigma0 n (p ∘ f)
-  | 0,     hp => hp.comp hf
-  | n + 1, hp => by
-      obtain ⟨q, hq, rfl⟩ := hp
-      exact ⟨q ∘ (fun x ↦ (f x.1, x.2)),
-             pi0_precomp (hf.comp Primrec.fst |>.pair Primrec.snd) n hq,
-             funext fun x ↦ rfl⟩
-
-theorem pi0_precomp {α β : Type} [Primcodable α] [Primcodable β]
-    {p : β → Prop} {f : α → β} (hf : Primrec f) : ∀ n, pi0 n p → pi0 n (p ∘ f)
-  | 0,     hp => hp.comp hf
-  | n + 1, hp => by
-      obtain ⟨q, hq, rfl⟩ := hp
-      exact ⟨q ∘ (fun x ↦ (f x.1, x.2)),
-             sigma0_precomp (hf.comp Primrec.fst |>.pair Primrec.snd) n hq,
-             funext fun x ↦ rfl⟩
-end
-
-theorem sigma0_precomp_rightInverse {α β : Type} [Primcodable α] [Primcodable β]
-    {p : α → Prop} {f : β → α} {g : α → β} (hg : Primrec g)
-    (hfg : ∀ a, f (g a) = a) : sigma0 n (p ∘ f) → sigma0 n p := by
-  intro hp
-  have : p = (p ∘ f) ∘ g := funext fun a => by simp [hfg]
-  rw [this]
-  exact sigma0_precomp hg n hp
-
-theorem pi0_precomp_rightInverse {α β : Type} [Primcodable α] [Primcodable β]
-    {p : α → Prop} {f : β → α} {g : α → β} (hg : Primrec g)
-    (hfg : ∀ a, f (g a) = a) : pi0 n (p ∘ f) → pi0 n p := by
-  intro hp
-  have : p = (p ∘ f) ∘ g := funext fun a => by simp [hfg]
-  rw [this]
-  exact pi0_precomp hg n hp
 
 
 /-! ## Helpers -/
@@ -1486,6 +1462,47 @@ theorem pi0_subset_sigma0_iff_collapse : (∀ p : α → Prop, pi0 n p → sigma
     simp_all
   · intro h p hp
     exact (h p).mpr hp
+
+private lemma collapse_sigma_pi_nat_iff_alpha (e : ℕ ≃ α) (he : Primrec e) (he' : Primrec e.symm) :
+    (∀ p : ℕ → Prop, sigma0 n p → pi0 n p) ↔ (∀ p : α → Prop, sigma0 n p → pi0 n p) := by
+  constructor
+  · intro h p hp
+    have : sigma0 n (fun m : ℕ ↦ p (e m)) := sigma0.comp_primrec hp he
+    have : pi0 n (fun m : ℕ ↦ p (e m)) := h _ this
+    have : pi0 n (fun a : α ↦ p (e (e.symm a))) :=
+      pi0.comp_primrec (p := fun m : ℕ ↦ p (e m)) this he'
+    simp_all
+  · intro h p hp
+    have : sigma0 n (fun a : α ↦ p (e.symm a)) := sigma0.comp_primrec hp he'
+    have : pi0 n (fun a : α ↦ p (e.symm a)) := h _ this
+    have : pi0 n (fun m : ℕ ↦ p (e.symm (e m))) :=
+      pi0.comp_primrec (p := fun a : α ↦ p (e.symm a)) this he
+    simp_all
+
+private lemma collapse_pi_sigma_nat_iff_alpha (e : ℕ ≃ α) (he : Primrec e) (he' : Primrec e.symm) :
+    (∀ p : ℕ → Prop, pi0 n p → sigma0 n p) ↔ (∀ p : α → Prop, pi0 n p → sigma0 n p) := by
+  constructor
+  · intro h p hp
+    have : pi0 n (fun m : ℕ ↦ p (e m)) := pi0.comp_primrec hp he
+    have : sigma0 n (fun m : ℕ ↦ p (e m)) := h _ this
+    have : sigma0 n (fun a : α ↦ p (e (e.symm a))) :=
+      sigma0.comp_primrec (p := fun m : ℕ ↦ p (e m)) this he'
+    simp_all
+  · intro h p hp
+    have : pi0 n (fun a : α ↦ p (e.symm a)) := pi0.comp_primrec hp he'
+    have : sigma0 n (fun a : α ↦ p (e.symm a)) := h _ this
+    have : sigma0 n (fun m : ℕ ↦ p (e.symm (e m))) :=
+      sigma0.comp_primrec (p := fun a : α ↦ p (e.symm a)) this he
+    simp_all
+
+theorem sigma0_subset_pi0_iff_collapse' (e : ℕ ≃ α) (he : Primrec e) (he' : Primrec e.symm) :
+    (∀ p : ℕ → Prop, sigma0 n p → pi0 n p) ↔ (∀ p : α → Prop, sigma0 n p ↔ pi0 n p) :=
+  (collapse_sigma_pi_nat_iff_alpha e he he').trans sigma0_subset_pi0_iff_collapse
+
+theorem pi0_subset_sigma0_iff_collapse' (e : ℕ ≃ α) (he : Primrec e) (he' : Primrec e.symm) :
+    (∀ p : ℕ → Prop, pi0 n p → sigma0 n p) ↔ (∀ p : α → Prop, sigma0 n p ↔ pi0 n p) :=
+  (collapse_pi_sigma_nat_iff_alpha e he he').trans pi0_subset_sigma0_iff_collapse
+
 
 /-! Inseparability of haltingSet and haltingSetCompl by delta0 sets -/
 
