@@ -425,94 +425,94 @@ theorem delta0.not (h : delta0 n p) : delta0 n (fun x ↦ ¬(p x)) := by
 /-! Closure under finite unions and finite intersections -/
 
 theorem sigma0.finset_union {k : ℕ} {f : Fin k → α → Prop} (hf : ∀ i, sigma0 n (f i)) :
-    sigma0 n (fun x => ∃ i, f i x) := by
+    sigma0 n (fun x ↦ ∃ i, f i x) := by
   induction k with
   | zero =>
-    have h_false : sigma0 n (fun _ : α => False) :=
+    have h_false : sigma0 n (fun _ : α ↦ False) :=
       sigma0.of_primrec (by
-        refine PrimrecPred.of_eq (p := fun _ : α => (0 : ℕ) = 1) ?_ ?_
+        refine PrimrecPred.of_eq (p := fun _ : α ↦ (0 : ℕ) = 1) ?_ ?_
         · exact Primrec.eq.comp (Primrec.const 0) (Primrec.const 1)
         · simp)
-    have h_eq : (fun x : α => ∃ i : Fin 0, f i x) = (fun _ : α => False) := by simp_all
+    have h_eq : (fun x : α ↦ ∃ i : Fin 0, f i x) = (fun _ : α ↦ False) := by simp_all
     simp_all
   | succ k ih =>
-    have key : (fun x : α => ∃ i : Fin (k + 1), f i x)
-        = (fun x => f 0 x ∨ ∃ i : Fin k, f i.succ x) := by
+    have key : (fun x : α ↦ ∃ i : Fin (k + 1), f i x)
+        = (fun x ↦ f 0 x ∨ ∃ i : Fin k, f i.succ x) := by
       funext x
       apply propext
       exact Fin.exists_fin_succ
     rw [key]
-    exact sigma0.or (hf 0) (ih (fun i => hf i.succ))
+    exact sigma0.or (hf 0) (ih (fun i ↦ hf i.succ))
 
 theorem sigma0.finset_inter {k : ℕ} {f : Fin k → α → Prop} (hf : ∀ i, sigma0 n (f i)) :
-    sigma0 n (fun x => ∀ i, f i x) := by
+    sigma0 n (fun x ↦ ∀ i, f i x) := by
   induction k with
   | zero =>
-    have h_true : sigma0 n (fun _ : α => True) :=
+    have h_true : sigma0 n (fun _ : α ↦ True) :=
       sigma0.of_primrec (by
-        refine PrimrecPred.of_eq (p := fun _ : α => (0 : ℕ) = 0) ?_ ?_
+        refine PrimrecPred.of_eq (p := fun _ : α ↦ (0 : ℕ) = 0) ?_ ?_
         · exact Primrec.eq.comp (Primrec.const 0) (Primrec.const 0)
         · simp)
-    have h_eq : (fun x : α => ∀ i : Fin 0, f i x) = (fun _ : α => True) := by simp_all
+    have h_eq : (fun x : α ↦ ∀ i : Fin 0, f i x) = (fun _ : α ↦ True) := by simp_all
     simp_all
   | succ k ih =>
-    have key : (fun x : α => ∀ i : Fin (k + 1), f i x)
-        = (fun x => f 0 x ∧ ∀ i : Fin k, f i.succ x) := by
+    have key : (fun x : α ↦ ∀ i : Fin (k + 1), f i x)
+        = (fun x ↦ f 0 x ∧ ∀ i : Fin k, f i.succ x) := by
       funext x
       apply propext
       exact Fin.forall_fin_succ
     rw [key]
-    exact sigma0.and (hf 0) (ih (fun i => hf i.succ))
+    exact sigma0.and (hf 0) (ih (fun i ↦ hf i.succ))
 
 theorem pi0.finset_union {k : ℕ} {f : Fin k → α → Prop} (hf : ∀ i, pi0 n (f i)) :
-    pi0 n (fun x => ∃ i, f i x) := by
+    pi0 n (fun x ↦ ∃ i, f i x) := by
   induction k with
   | zero =>
-    have h_false : pi0 n (fun _ : α => False) :=
+    have h_false : pi0 n (fun _ : α ↦ False) :=
       pi0.of_primrec (by
-        refine PrimrecPred.of_eq (p := fun _ : α => (0 : ℕ) = 1) ?_ ?_
+        refine PrimrecPred.of_eq (p := fun _ : α ↦ (0 : ℕ) = 1) ?_ ?_
         · exact Primrec.eq.comp (Primrec.const 0) (Primrec.const 1)
         · simp)
-    have h_eq : (fun x : α => ∃ i : Fin 0, f i x) = (fun _ : α => False) := by simp_all
+    have h_eq : (fun x : α ↦ ∃ i : Fin 0, f i x) = (fun _ : α ↦ False) := by simp_all
     simp_all
   | succ k ih =>
-    have key : (fun x : α => ∃ i : Fin (k + 1), f i x)
-        = (fun x => f 0 x ∨ ∃ i : Fin k, f i.succ x) := by
+    have key : (fun x : α ↦ ∃ i : Fin (k + 1), f i x)
+        = (fun x ↦ f 0 x ∨ ∃ i : Fin k, f i.succ x) := by
       funext x
       apply propext
       exact Fin.exists_fin_succ
     rw [key]
-    exact pi0.or (hf 0) (ih (fun i => hf i.succ))
+    exact pi0.or (hf 0) (ih (fun i ↦ hf i.succ))
 
 theorem pi0.finset_inter {k : ℕ} {f : Fin k → α → Prop} (hf : ∀ i, pi0 n (f i)) :
-    pi0 n (fun x => ∀ i, f i x) := by
+    pi0 n (fun x ↦ ∀ i, f i x) := by
   induction k with
   | zero =>
-    have h_true : pi0 n (fun _ : α => True) :=
+    have h_true : pi0 n (fun _ : α ↦ True) :=
       pi0.of_primrec (by
-        refine PrimrecPred.of_eq (p := fun _ : α => (0 : ℕ) = 0) ?_ ?_
+        refine PrimrecPred.of_eq (p := fun _ : α ↦ (0 : ℕ) = 0) ?_ ?_
         · exact Primrec.eq.comp (Primrec.const 0) (Primrec.const 0)
         · simp)
-    have h_eq : (fun x : α => ∀ i : Fin 0, f i x) = (fun _ : α => True) := by simp_all
+    have h_eq : (fun x : α ↦ ∀ i : Fin 0, f i x) = (fun _ : α ↦ True) := by simp_all
     simp_all
   | succ k ih =>
-    have key : (fun x : α => ∀ i : Fin (k + 1), f i x)
-        = (fun x => f 0 x ∧ ∀ i : Fin k, f i.succ x) := by
+    have key : (fun x : α ↦ ∀ i : Fin (k + 1), f i x)
+        = (fun x ↦ f 0 x ∧ ∀ i : Fin k, f i.succ x) := by
       funext x
       apply propext
       exact Fin.forall_fin_succ
     rw [key]
-    exact pi0.and (hf 0) (ih (fun i => hf i.succ))
+    exact pi0.and (hf 0) (ih (fun i ↦ hf i.succ))
 
 theorem delta0.finset_union {k : ℕ} {f : Fin k → α → Prop}
     (hf : ∀ i, delta0 n (f i)) :
-    delta0 n (fun x => ∃ i, f i x) :=
-  ⟨sigma0.finset_union (fun i => (hf i).1), pi0.finset_union (fun i => (hf i).2)⟩
+    delta0 n (fun x ↦ ∃ i, f i x) :=
+  ⟨sigma0.finset_union (fun i ↦ (hf i).1), pi0.finset_union (fun i ↦ (hf i).2)⟩
 
 theorem delta0.finset_inter {k : ℕ} {f : Fin k → α → Prop}
     (hf : ∀ i, delta0 n (f i)) :
-    delta0 n (fun x => ∀ i, f i x) :=
-  ⟨sigma0.finset_inter (fun i => (hf i).1), pi0.finset_inter (fun i => (hf i).2)⟩
+    delta0 n (fun x ↦ ∀ i, f i x) :=
+  ⟨sigma0.finset_inter (fun i ↦ (hf i).1), pi0.finset_inter (fun i ↦ (hf i).2)⟩
 
 
 /-! ## Closure under (bounded) quantifiers -/
