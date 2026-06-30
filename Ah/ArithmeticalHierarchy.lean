@@ -446,12 +446,12 @@ theorem sigma0.finset_union {k : ℕ} {f : Fin k → α → Prop} (hf : ∀ i, s
     have h_eq : (fun x : α ↦ ∃ i : Fin 0, f i x) = (fun _ : α ↦ False) := by simp_all
     simp_all
   | succ k ih =>
-    have key : (fun x : α ↦ ∃ i : Fin (k + 1), f i x)
+    have h_key : (fun x : α ↦ ∃ i : Fin (k + 1), f i x)
         = (fun x ↦ f 0 x ∨ ∃ i : Fin k, f i.succ x) := by
       funext x
       apply propext
       exact Fin.exists_fin_succ
-    rw [key]
+    rw [h_key]
     exact sigma0.or (hf 0) (ih (fun i ↦ hf i.succ))
 
 theorem sigma0.finset_inter {k : ℕ} {f : Fin k → α → Prop} (hf : ∀ i, sigma0 n (f i)) :
@@ -466,12 +466,12 @@ theorem sigma0.finset_inter {k : ℕ} {f : Fin k → α → Prop} (hf : ∀ i, s
     have h_eq : (fun x : α ↦ ∀ i : Fin 0, f i x) = (fun _ : α ↦ True) := by simp_all
     simp_all
   | succ k ih =>
-    have key : (fun x : α ↦ ∀ i : Fin (k + 1), f i x)
+    have h_key : (fun x : α ↦ ∀ i : Fin (k + 1), f i x)
         = (fun x ↦ f 0 x ∧ ∀ i : Fin k, f i.succ x) := by
       funext x
       apply propext
       exact Fin.forall_fin_succ
-    rw [key]
+    rw [h_key]
     exact sigma0.and (hf 0) (ih (fun i ↦ hf i.succ))
 
 theorem pi0.finset_union {k : ℕ} {f : Fin k → α → Prop} (hf : ∀ i, pi0 n (f i)) :
@@ -486,12 +486,12 @@ theorem pi0.finset_union {k : ℕ} {f : Fin k → α → Prop} (hf : ∀ i, pi0 
     have h_eq : (fun x : α ↦ ∃ i : Fin 0, f i x) = (fun _ : α ↦ False) := by simp_all
     simp_all
   | succ k ih =>
-    have key : (fun x : α ↦ ∃ i : Fin (k + 1), f i x)
+    have h_key : (fun x : α ↦ ∃ i : Fin (k + 1), f i x)
         = (fun x ↦ f 0 x ∨ ∃ i : Fin k, f i.succ x) := by
       funext x
       apply propext
       exact Fin.exists_fin_succ
-    rw [key]
+    rw [h_key]
     exact pi0.or (hf 0) (ih (fun i ↦ hf i.succ))
 
 theorem pi0.finset_inter {k : ℕ} {f : Fin k → α → Prop} (hf : ∀ i, pi0 n (f i)) :
@@ -506,12 +506,12 @@ theorem pi0.finset_inter {k : ℕ} {f : Fin k → α → Prop} (hf : ∀ i, pi0 
     have h_eq : (fun x : α ↦ ∀ i : Fin 0, f i x) = (fun _ : α ↦ True) := by simp_all
     simp_all
   | succ k ih =>
-    have key : (fun x : α ↦ ∀ i : Fin (k + 1), f i x)
+    have h_key : (fun x : α ↦ ∀ i : Fin (k + 1), f i x)
         = (fun x ↦ f 0 x ∧ ∀ i : Fin k, f i.succ x) := by
       funext x
       apply propext
       exact Fin.forall_fin_succ
-    rw [key]
+    rw [h_key]
     exact pi0.and (hf 0) (ih (fun i ↦ hf i.succ))
 
 theorem delta0.finset_union {k : ℕ} {f : Fin k → α → Prop}
@@ -1144,6 +1144,36 @@ theorem sigma0Complete.of_manyOneReducible
 theorem pi0Complete.of_manyOneReducible
     (hq : pi0Complete n q) (hp : pi0 n p) (hred : q ≤₀ p) : pi0Complete n p :=
   ⟨hp, pi0Hard.of_manyOneReducible hq.2 hred⟩
+
+theorem sigma0Complete.compl_pi0Complete (h : sigma0Complete n p) :
+    pi0Complete n (fun e ↦ ¬(p e)) := by
+  constructor
+  · exact pi0.iff_not_sigma0.mpr (h.1.of_eq (fun e ↦ not_not.symm))
+  · intro q hq
+    obtain ⟨f, f_comp, hf⟩ := h.2 (fun e ↦ ¬(q e)) (pi0.iff_not_sigma0.mp hq)
+    refine ⟨f, f_comp, fun e ↦ ?_⟩
+    simp [← hf e]
+
+theorem pi0Complete.compl_sigma0Complete (h : pi0Complete n p) :
+    sigma0Complete n (fun e ↦ ¬(p e)) := by
+  constructor
+  · refine pi0.iff_not_sigma0.mp (h.1.of_eq (fun e ↦ ?_))
+    simp
+  · intro q hq
+    obtain ⟨f, f_comp, hf⟩ := h.2 (fun e ↦ ¬(q e))
+      (pi0.iff_not_sigma0.mpr (hq.of_eq (fun e ↦ not_not.symm)))
+    refine ⟨f, f_comp, fun e ↦ ?_⟩
+    simp [← hf e]
+
+theorem sigma0Complete.of_eq (h : sigma0Complete n p) (heq : ∀ e, p e ↔ q e) :
+    sigma0Complete n q :=
+  ⟨h.1.of_eq heq, fun r hr ↦ (h.2 r hr).imp
+    (fun f ⟨hc, hf⟩ ↦ ⟨hc, fun e ↦ (hf e).trans (heq (f e))⟩)⟩
+
+theorem pi0Complete.of_eq (h : pi0Complete n p) (heq : ∀ e, p e ↔ q e) :
+    pi0Complete n q :=
+  ⟨h.1.of_eq heq, fun r hr ↦ (h.2 r hr).imp
+    (fun f ⟨hc, hf⟩ ↦ ⟨hc, fun e ↦ (hf e).trans (heq (f e))⟩)⟩
 
 /-! The halting set -/
 
@@ -1887,7 +1917,8 @@ theorem rice (p : (α →. β) → Prop) (h_ext : extensional p) (h_nontriv : no
 
 /-! The set of indices of total computable functions is complete for `pi0 2` -/
 
-def totalCodes : ℕ → Prop := fun e => ∀ n, (eval (ofNatCode e) n).Dom
+def totalCodes : ℕ → Prop := fun e ↦ ∀ n, (eval (ofNatCode e) n).Dom
+def nonTotalCodes : ℕ → Prop := fun e ↦ ¬(totalCodes e)
 
 theorem totalCodes_pi02 : pi0 2 totalCodes := by
   refine pi0.of_eq
@@ -1895,6 +1926,11 @@ theorem totalCodes_pi02 : pi0 2 totalCodes := by
       ((haltingSet_mem_sigma0 1).comp_primrec (Primrec₂.natPair.comp Primrec.fst Primrec.snd)))
     (fun e ↦ ?_)
   simp [totalCodes]
+
+private lemma ofNatCode_encode_curry (c : Nat.Partrec.Code) (n : ℕ) :
+    ofNatCode (Encodable.encode (c.curry n)) = c.curry n := by
+  rw [← Nat.Partrec.Code.ofNatCode_eq]
+  exact Denumerable.ofNat_encode _
 
 theorem haltingSetCompl2_reduces_to_totalCodes : haltingSetCompl 2 ≤₀ totalCodes := by
   -- `k` is the code of a universal program for `haltingSetCompl 2`
@@ -1908,14 +1944,112 @@ theorem haltingSetCompl2_reduces_to_totalCodes : haltingSetCompl 2 ≤₀ totalC
   refine ⟨f, f_comp, fun n ↦ ?_⟩
   simp only [f, totalCodes]
   rw [hk n]
-  have h_decode : ofNatCode (f n) = (ofNatCode k).curry n := by
-    rw [← Nat.Partrec.Code.ofNatCode_eq]
-    exact Denumerable.ofNat_encode _
-  simp [f, h_decode]
+  simp [ofNatCode_encode_curry (ofNatCode k) n]
 
 theorem totalCodes_pi02_complete : pi0Complete 2 totalCodes :=
   haltingSetCompl_pi0_complete.of_manyOneReducible totalCodes_pi02
     haltingSetCompl2_reduces_to_totalCodes
+
+theorem nonTotalCodes_sigma02_complete : sigma0Complete 2 nonTotalCodes :=
+  totalCodes_pi02_complete.compl_sigma0Complete
+
+/-! The set of indices of functions with (in)finite domain. -/
+
+def finDomCodes : ℕ → Prop := fun e ↦ ∃ n, ∀ m ≥ n, ¬(eval (ofNatCode e) m).Dom
+def infDomCodes : ℕ → Prop := fun e ↦ ∀ n, ∃ m ≥ n, (eval (ofNatCode e) m).Dom
+
+theorem finDomCodes_iff_not_infDomCodes (e : ℕ) : finDomCodes e ↔ ¬(infDomCodes e) := by
+  simp [finDomCodes, infDomCodes]
+
+theorem infDomCodes_pi02 : pi0 2 infDomCodes := by
+  refine pi0.of_eq
+    (pi0.of_forall_sigma01
+      (r := fun e n ↦ ∃ m ≥ n, haltingSet 1 (Nat.pair e m)) ?_)
+    (fun e ↦ ?_)
+  · have h : sigma0 1 (fun x : (ℕ × ℕ) × ℕ ↦ x.1.2 ≤ x.2 ∧ haltingSet 1 (Nat.pair x.1.1 x.2)) :=
+      sigma0.and
+        (sigma0.of_primrec (Primrec.nat_le.comp (Primrec.snd.comp Primrec.fst) Primrec.snd))
+        ((haltingSet_mem_sigma0 1).comp_primrec
+          (Primrec₂.natPair.comp (Primrec.fst.comp Primrec.fst) Primrec.snd))
+    refine sigma0.of_eq (sigma0.exists_succ h) ?_
+    simp [ge_iff_le]
+  · simp [infDomCodes]
+
+/-- The program for a code `c` that: on input `w = pair n i` runs `c`
+on `pair n 0, pair n 1, …, pair n i` in turn and halts iff all of them halt. -/
+private noncomputable def haltUpTo (c : Nat.Partrec.Code) : ℕ →. ℕ :=
+  fun m ↦ Nat.rec (eval c (Nat.pair m.unpair.1 0))
+    (fun k ih ↦ ih.bind (fun _ ↦ eval c (Nat.pair m.unpair.1 (k + 1)))) m.unpair.2
+
+private lemma haltUpTo_partrec (c : Nat.Partrec.Code) : Nat.Partrec (haltUpTo c) := by
+  rw [← Partrec.nat_iff]
+  apply Partrec.nat_rec (f := fun m : ℕ ↦ m.unpair.2)
+    (g := fun m ↦ eval c (Nat.pair m.unpair.1 0))
+    (h := fun m (yi : ℕ × ℕ) ↦ eval c (Nat.pair m.unpair.1 (yi.1 + 1)))
+  · exact (Primrec.snd.comp Primrec.unpair).to_comp
+  · exact Nat.Partrec.Code.eval_part.comp (Computable.const c)
+      ((Primrec₂.natPair.comp (Primrec.fst.comp Primrec.unpair) (Primrec.const 0)).to_comp)
+  · exact Nat.Partrec.Code.eval_part.comp (Computable.const c)
+      ((Primrec₂.natPair.comp (Primrec.fst.comp (Primrec.unpair.comp Primrec.fst))
+        (Primrec.succ.comp (Primrec.fst.comp Primrec.snd))).to_comp)
+
+private lemma haltUpTo_dom (c : Nat.Partrec.Code) (n i : ℕ) :
+    (haltUpTo c (Nat.pair n i)).Dom ↔ ∀ j ≤ i, (eval c (Nat.pair n j)).Dom := by
+  induction i with
+  | zero =>
+    simp_all [haltUpTo, Nat.unpair_pair]
+  | succ i ih =>
+    have : (haltUpTo c (Nat.pair n (i + 1))).Dom ↔
+        (haltUpTo c (Nat.pair n i)).Dom ∧ (eval c (Nat.pair n (i + 1))).Dom := by
+      simp [haltUpTo]
+    simp_all only
+    constructor
+    · rintro ⟨h1, h2⟩ j hj
+      rcases Nat.lt_succ_iff_lt_or_eq.mp (Nat.lt_succ_of_le hj) with h | h
+      · exact h1 j (by omega)
+      · subst h
+        exact h2
+    · intro h
+      refine ⟨fun j hj ↦ ?_, h (i + 1) (le_refl _)⟩
+      exact h j (by omega)
+
+theorem haltingSetCompl2_reduces_to_infDomCodes : haltingSetCompl 2 ≤₀ infDomCodes := by
+  -- `k` is the code of a universal program for `haltingSetCompl 2`
+  obtain ⟨k, hk⟩ := (haltingSet_section (haltingSetCompl 2)).2 (haltingSetCompl_mem_pi0 2)
+  have h_key : ∀ m : ℕ, haltingSetCompl 2 m ↔ ∀ j, (eval (ofNatCode k) (Nat.pair m j)).Dom := by
+    intro m
+    simp [hk m, Nat.unpair_pair]
+  -- `c` is a code for the `haltUpTo` program built from `ofNatCode k`.
+  obtain ⟨c, hc⟩ := Nat.Partrec.Code.exists_code.mp (haltUpTo_partrec (ofNatCode k))
+  -- the reduction maps `m` to the code of `c.curry m`.
+  let f : ℕ → ℕ := fun m ↦ Encodable.encode (c.curry m)
+  have f_comp : Computable f :=
+    Computable.encode.comp ((Nat.Partrec.Code.primrec₂_curry.comp
+      (Primrec.const c) Primrec.id).to_comp)
+  refine ⟨f, f_comp, fun m ↦ ?_⟩
+  -- show correctness of the reduction
+  have h_eval : ∀ i, eval (ofNatCode (f m)) i = haltUpTo (ofNatCode k) (Nat.pair m i) := by
+    intro _
+    rw [ofNatCode_encode_curry c m, Nat.Partrec.Code.eval_curry, hc]
+  simp only [infDomCodes, h_key m]
+  constructor
+  · intro h k
+    refine ⟨k, le_refl k, ?_⟩
+    rw [h_eval k, haltUpTo_dom]
+    intro j _
+    exact h j
+  · intro h j
+    obtain ⟨k, hk_geq, h_dom⟩ := h j
+    rw [h_eval k, haltUpTo_dom] at h_dom
+    exact h_dom j hk_geq
+
+theorem infDomCodes_pi02_complete : pi0Complete 2 infDomCodes :=
+  haltingSetCompl_pi0_complete.of_manyOneReducible infDomCodes_pi02
+    haltingSetCompl2_reduces_to_infDomCodes
+
+theorem finDomCodes_sigma02_complete : sigma0Complete 2 finDomCodes :=
+  infDomCodes_pi02_complete.compl_sigma0Complete.of_eq
+    (fun e ↦ (finDomCodes_iff_not_infDomCodes e).symm)
 
 
 end Computability
