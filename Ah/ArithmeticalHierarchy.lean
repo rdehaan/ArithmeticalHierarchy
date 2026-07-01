@@ -1917,8 +1917,8 @@ theorem rice (p : (α →. β) → Prop) (h_ext : extensional p) (h_nontriv : no
 
 /-! The set of indices of total computable functions is complete for `pi0 2` -/
 
-def totalCodes : ℕ → Prop := fun e ↦ ∀ n, (eval (ofNatCode e) n).Dom
-def nonTotalCodes : ℕ → Prop := fun e ↦ ¬(totalCodes e)
+def totalCodes (e : ℕ) : Prop := ∀ n, (eval (ofNatCode e) n).Dom
+def nonTotalCodes (e : ℕ) : Prop := ¬(totalCodes e)
 
 theorem totalCodes_pi02 : pi0 2 totalCodes := by
   refine pi0.of_eq
@@ -1955,8 +1955,8 @@ theorem nonTotalCodes_sigma02_complete : sigma0Complete 2 nonTotalCodes :=
 
 /-! The set of indices of functions with (in)finite domain. -/
 
-def finDomCodes : ℕ → Prop := fun e ↦ ∃ n, ∀ m ≥ n, ¬(eval (ofNatCode e) m).Dom
-def infDomCodes : ℕ → Prop := fun e ↦ ∀ n, ∃ m ≥ n, (eval (ofNatCode e) m).Dom
+def finDomCodes (e : ℕ) : Prop := ∃ n, ∀ m ≥ n, ¬(eval (ofNatCode e) m).Dom
+def infDomCodes (e : ℕ) : Prop := ∀ n, ∃ m ≥ n, (eval (ofNatCode e) m).Dom
 
 theorem finDomCodes_iff_not_infDomCodes (e : ℕ) : finDomCodes e ↔ ¬(infDomCodes e) := by
   simp [finDomCodes, infDomCodes]
@@ -2010,7 +2010,7 @@ private lemma haltUpTo_dom (c : Nat.Partrec.Code) (n i : ℕ) :
       · subst h
         exact h2
     · intro h
-      refine ⟨fun j hj ↦ ?_, h (i + 1) (le_refl _)⟩
+      refine ⟨fun j hj ↦ ?_, h (i + 1) (by omega)⟩
       exact h j (by omega)
 
 theorem haltingSetCompl2_reduces_to_infDomCodes : haltingSetCompl 2 ≤₀ infDomCodes := by
@@ -2034,14 +2034,14 @@ theorem haltingSetCompl2_reduces_to_infDomCodes : haltingSetCompl 2 ≤₀ infDo
   simp only [infDomCodes, h_key m]
   constructor
   · intro h k
-    refine ⟨k, le_refl k, ?_⟩
+    refine ⟨k, by omega, ?_⟩
     rw [h_eval k, haltUpTo_dom]
     intro j _
     exact h j
   · intro h j
-    obtain ⟨k, hk_geq, h_dom⟩ := h j
-    rw [h_eval k, haltUpTo_dom] at h_dom
-    exact h_dom j hk_geq
+    obtain ⟨wit, h_wit_geq, h_dom⟩ := h j
+    rw [h_eval wit, haltUpTo_dom] at h_dom
+    exact h_dom j h_wit_geq
 
 theorem infDomCodes_pi02_complete : pi0Complete 2 infDomCodes :=
   haltingSetCompl_pi0_complete.of_manyOneReducible infDomCodes_pi02
@@ -2050,6 +2050,126 @@ theorem infDomCodes_pi02_complete : pi0Complete 2 infDomCodes :=
 theorem finDomCodes_sigma02_complete : sigma0Complete 2 finDomCodes :=
   infDomCodes_pi02_complete.compl_sigma0Complete.of_eq
     (fun e ↦ (finDomCodes_iff_not_infDomCodes e).symm)
+
+/-! The set of indices of functions with (in)finite range. -/
+
+def infRangeCodes (e : ℕ) : Prop := ∀ m, ∃ i, eval (ofNatCode e) i = Part.some m
+def finRangeCodes (e : ℕ) : Prop := ¬(infRangeCodes e)
+
+theorem finRangeCodes_iff_not_infRangeCodes (e : ℕ) : finRangeCodes e ↔ ¬(infRangeCodes e) :=
+  Iff.rfl
+
+private lemma infRangeCodes_inside_sigma01 : sigma0 1 (fun y : (ℕ × ℕ) × ℕ ↦
+    eval (ofNatCode y.1.1) y.2 = Part.some y.1.2) := by
+  -- `g ((e, n), i)` halts exactly when `ofNatCode e` on `i` outputs `n`
+  let g : ((ℕ × ℕ) × ℕ) →. ℕ := fun y ↦ (eval (ofNatCode y.1.1) y.2).bind
+    (fun v ↦ if v = y.1.2 then Part.some 0 else Part.none)
+  have hg_partrec : Partrec g := by
+    have h_eval : Partrec (fun y : (ℕ × ℕ) × ℕ ↦ eval (ofNatCode y.1.1) y.2) :=
+      Nat.Partrec.Code.eval_part.comp ((Primrec.ofNat Nat.Partrec.Code).to_comp.comp
+        (Computable.fst.comp Computable.fst)) Computable.snd
+    have h_pred : PrimrecPred (fun z : ((ℕ × ℕ) × ℕ) × ℕ ↦ z.2 = z.1.1.2) :=
+      Primrec.eq.comp Primrec.snd (Primrec.snd.comp (Primrec.fst.comp Primrec.fst))
+    have h_branch : Partrec₂ (fun (y : (ℕ × ℕ) × ℕ) (v : ℕ) ↦
+        if v = y.1.2 then Part.some (0 : ℕ) else Part.none) := by
+      refine Partrec.of_eq (Partrec.cond h_pred.decide.to_comp
+        (Partrec.const' (Part.some 0)) Partrec.none) (fun z ↦ ?_)
+      exact Bool.cond_decide (z.2 = z.1.1.2) (Part.some 0) Part.none
+    exact Partrec.bind h_eval h_branch
+  -- the domain of `g` is r.e., and coincides with the target predicate
+  rw [sigma0.one_iff_re]
+  refine hg_partrec.dom_re.of_eq (fun y ↦ ?_)
+  rw [Part.eq_some_iff]
+  simp only [g, Part.bind_dom]
+  constructor
+  · -- if `g ((e, n), i)` is defined, `eval e i` returns exactly `n`
+    rintro ⟨hd, h_val⟩
+    split_ifs at h_val with hv
+    · rw [← hv]
+      exact Part.get_mem hd
+    · exact absurd h_val (by simp)
+  · -- if `eval` returns `n`, then `g ((e, n), i)` is defined
+    intro h_mem
+    refine ⟨Part.dom_iff_mem.mpr ⟨_, h_mem⟩, ?_⟩
+    simp [if_pos (Part.get_eq_of_mem h_mem _)]
+
+theorem infRangeCodes_pi02 : pi0 2 infRangeCodes := by
+  refine pi0.of_eq
+    (pi0.of_forall_sigma01
+      (r := fun e m ↦ ∃ i, eval (ofNatCode e) i = Part.some m) ?_)
+    (fun e ↦ ?_)
+  · exact sigma0.of_eq (sigma0.exists_succ infRangeCodes_inside_sigma01)
+      (fun _ ↦ Iff.rfl)
+  · simp [infRangeCodes]
+
+/-- Like `haltUpTo`, but returns the step index `i` on success. -/
+private noncomputable def haltUpToIdx (c : Nat.Partrec.Code) : ℕ →. ℕ :=
+  fun m ↦ (haltUpTo c m).map (fun _ ↦ m.unpair.2)
+
+private lemma haltUpToIdx_partrec (c : Nat.Partrec.Code) : Nat.Partrec (haltUpToIdx c) := by
+  apply Partrec.nat_iff.mp
+  unfold haltUpToIdx
+  apply Partrec.map (Partrec.nat_iff.mpr (haltUpTo_partrec c))
+  exact (Primrec.snd.comp Primrec.unpair).to_comp.comp Computable.fst
+
+private lemma haltUpToIdx_dom (c : Nat.Partrec.Code) (m i : ℕ) :
+    (haltUpToIdx c (Nat.pair m i)).Dom ↔ ∀ j ≤ i, (eval c (Nat.pair m j)).Dom := by
+  simp [haltUpToIdx, haltUpTo_dom]
+
+private lemma haltUpToIdx_val (c : Nat.Partrec.Code) (m i : ℕ)
+    (h : (haltUpToIdx c (Nat.pair m i)).Dom) :
+    haltUpToIdx c (Nat.pair m i) = Part.some i := by
+  simp only [haltUpToIdx, Nat.unpair_pair]
+  rw [Part.eq_some_iff, Part.mem_map_iff]
+  have hd : (haltUpTo c (Nat.pair m i)).Dom := h
+  exact ⟨_, Part.get_mem hd, rfl⟩
+
+theorem haltingSetCompl2_reduces_to_infRangeCodes : haltingSetCompl 2 ≤₀ infRangeCodes := by
+  -- `k` is the code of a universal program for `haltingSetCompl 2`
+  obtain ⟨k, hk⟩ := (haltingSet_section (haltingSetCompl 2)).2 (haltingSetCompl_mem_pi0 2)
+  have h_key : ∀ m : ℕ, haltingSetCompl 2 m ↔ ∀ j, (eval (ofNatCode k) (Nat.pair m j)).Dom := by
+    intro m
+    simp [hk m, Nat.unpair_pair]
+  -- `c` is a code for the `haltUpToIdx` program built from `ofNatCode k`.
+  obtain ⟨c, hc⟩ := Nat.Partrec.Code.exists_code.mp (haltUpToIdx_partrec (ofNatCode k))
+  -- the reduction maps `m` to the code of `c.curry m`.
+  let f : ℕ → ℕ := fun m ↦ Encodable.encode (c.curry m)
+  have f_comp : Computable f :=
+    Computable.encode.comp ((Nat.Partrec.Code.primrec₂_curry.comp
+      (Primrec.const c) Primrec.id).to_comp)
+  refine ⟨f, f_comp, fun m ↦ ?_⟩
+  -- show correctness of the reduction
+  have h_eval : ∀ i, eval (ofNatCode (f m)) i = haltUpToIdx (ofNatCode k) (Nat.pair m i) := by
+    intro i
+    rw [ofNatCode_encode_curry c m, Nat.Partrec.Code.eval_curry, hc]
+  simp only [infRangeCodes, h_key m]
+  constructor
+  · -- if k halts on all (m, j), then c.curry m outputs n for input n
+    intro h n
+    refine ⟨n, ?_⟩
+    rw [h_eval n, haltUpToIdx_val (ofNatCode k) m n]
+    rw [haltUpToIdx_dom]
+    intro j _
+    exact h j
+  · -- if c.curry m has infinite range, extract a witness that k halts on (m, j)
+    intro h j
+    obtain ⟨i, hi⟩ := h j
+    rw [h_eval i] at hi
+    have h_dom : (haltUpToIdx (ofNatCode k) (Nat.pair m i)).Dom := by
+      rw [hi]
+      trivial
+    have h_val := haltUpToIdx_val (ofNatCode k) m i h_dom
+    have hij : j = i := Part.some_inj.mp (by rw [← hi, h_val])
+    rw [hij]
+    have hd := (haltUpToIdx_dom (ofNatCode k) m i).mp h_dom
+    exact hd i (by omega)
+
+theorem infRangeCodes_pi02_complete : pi0Complete 2 infRangeCodes :=
+  haltingSetCompl_pi0_complete.of_manyOneReducible infRangeCodes_pi02
+    haltingSetCompl2_reduces_to_infRangeCodes
+
+theorem finRangeCodes_sigma02_complete : sigma0Complete 2 finRangeCodes :=
+  infRangeCodes_pi02_complete.compl_sigma0Complete
 
 
 end Computability
